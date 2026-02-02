@@ -1,0 +1,26 @@
+{
+    "folders": [
+        {
+            "path": "server",
+        },
+        {
+            "path": "web",
+        },
+        {
+            "path": "devices/esp32-gate",
+        },
+        {
+            "path": "devices/esp32-face",
+        },
+        {
+            "path": "devices/esp32-finger",
+        },
+        {
+            "path": "devices/esp32-LPR",
+        },
+        {
+            "name": "test",
+            "path": "../test",
+        },
+    ],
+}

@@ -7,5 +7,5 @@ void setup() {
 
 void loop() {
   Serial.println("System Running...");
-  delay(2000);
+  delay(1000);
 }

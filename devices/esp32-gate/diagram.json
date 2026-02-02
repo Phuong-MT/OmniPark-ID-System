@@ -1,0 +1,9 @@
+{
+    "version": 1,
+    "author": "Gate System",
+    "parts": [{ "type": "wokwi-esp32-devkit-v1", "id": "esp" }],
+    "connections": [
+        ["esp:TX0", "$serialMonitor:RX", ""],
+        ["esp:RX0", "$serialMonitor:TX", ""]
+    ]
+}
