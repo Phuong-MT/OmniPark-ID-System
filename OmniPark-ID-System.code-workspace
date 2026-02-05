@@ -19,8 +19,7 @@
             "path": "devices/esp32-LPR",
         },
         {
-            "name": "test",
-            "path": "../test",
+            "path": "devices/shared-libs",
         },
     ],
 }
