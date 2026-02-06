@@ -4,6 +4,7 @@ import { AppService } from './app.service';
 import { MqttModule } from './mqtt/mqtt.module';
 import { ConfigModule } from '@nestjs/config';
 import { DevicesModule } from './devices/devices.module';
+import { ConnectDBModule } from './utils/connectDB';
 
 @Module({
   imports: [
@@ -11,6 +12,7 @@ import { DevicesModule } from './devices/devices.module';
       isGlobal: true,
       envFilePath: '.env',
     }),
+    ConnectDBModule,
     MqttModule,
     DevicesModule,
   ],
