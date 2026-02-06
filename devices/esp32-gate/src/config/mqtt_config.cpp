@@ -1,6 +1,8 @@
 #include "mqtt_config.h"
 #include "secrets.h"
 
+std::map<String, MqttHandler> MqttConfig::handlers;
+
 MqttConfig::MqttConfig(Client& client)
     : mqtt(client) {}
 
@@ -8,6 +10,11 @@ void MqttConfig::begin() {
     mqtt.setServer(MQTT_HOST, MQTT_PORT);
     mqtt.setCallback(MqttConfig::onMessage);
 }
+
+void MqttConfig::registerHandler(const char* topic, MqttHandler handler) {
+    handlers[String(topic)] = handler;
+}
+
 
 void MqttConfig::loop() {
     if (!mqtt.connected()) {
@@ -17,7 +24,7 @@ void MqttConfig::loop() {
 }
 
 void MqttConfig::reconnect() {
-    String clientId = "ESP32_TLV_";
+    String clientId = "ESP32_GATE_";
     clientId += String((uint32_t)ESP.getEfuseMac(), HEX);
     while (!mqtt.connected()) {
         Serial.print("[MQTT] Connecting... ");
@@ -45,6 +52,8 @@ bool MqttConfig::subscribe(const char* topic, uint8_t qos) {
 
 bool MqttConfig::publish(const char* topic, const char* payload) {
     if (!mqtt.connected()) return false;
+    Serial.print("[MQTT] Publishing: ");
+    Serial.println(topic);
     return mqtt.publish(topic, payload);
 }
 
@@ -61,4 +70,11 @@ void MqttConfig::onMessage(char* topic, byte* payload, unsigned int length) {
         Serial.print((char)payload[i]);
     }
     Serial.println();
+
+    auto it = handlers.find(String(topic));
+    if (it != handlers.end()) {
+        it->second(topic, payload, length);
+    } else {
+        Serial.println("[MQTT] No handler for this topic");
+    }
 }

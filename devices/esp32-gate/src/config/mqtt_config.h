@@ -1,7 +1,13 @@
 #pragma once
-
-#include <WiFi.h>
+#include <map>
+#include <functional>
 #include <PubSubClient.h>
+
+using MqttHandler = std::function<void(
+    const char* topic,
+    const uint8_t* payload,
+    unsigned int length
+)>;
 
 class MqttConfig {
 public:
@@ -9,15 +15,17 @@ public:
 
     void begin();
     void loop();
+    void reconnect();
 
     bool subscribe(const char* topic, uint8_t qos = 0);
     bool publish(const char* topic, const char* payload);
-
     bool connected();
 
-private:
-    PubSubClient mqtt;
+    void registerHandler(const char* topic, MqttHandler handler);
 
-    void reconnect();
+private:
     static void onMessage(char* topic, byte* payload, unsigned int length);
+
+    static std::map<String, MqttHandler> handlers;
+    PubSubClient mqtt;
 };
