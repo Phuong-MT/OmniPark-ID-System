@@ -14,7 +14,7 @@ WiFiClient net;
 MqttConfig mqtt(net);
 
 String clientId = "ESP32_GATE_" + String((uint32_t)ESP.getEfuseMac(), HEX);
-HandshakeManager hs(clientId.c_str());
+HandshakeManager hs(clientId.c_str(), String((uint32_t)ESP.getEfuseMac(), HEX).c_str());
 
 unsigned long lastHandshakeMs = 0;
 const unsigned long HANDSHAKE_INTERVAL = 20000; // 20s
@@ -53,12 +53,11 @@ void setup() {
 
   Serial.println("Setup wifi completed.");
 
-  mqtt.begin();
-
   //register handle callback message broker
   mqtt.registerHandler(
-    HANDSHAKE_TOPIC,
+    "device/handshake/ack",
     [&](const char*, const uint8_t* payload, unsigned int length) {
+      Serial.println("Handshake ack");
       std::string msg((char*)payload, length);
 
       if (hs.handleResponsePayload(msg)) {
@@ -66,6 +65,8 @@ void setup() {
       }
     }
   );
+
+  mqtt.begin();
 }
 
 void loop() {
@@ -92,7 +93,7 @@ void loop() {
 
     Serial.println("[HS] Sending handshake...");
     mqtt.publish(
-        HANDSHAKE_TOPIC,
+        "device/handshake/req",
         hs.buildRequestPayload().c_str()
     );
 

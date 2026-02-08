@@ -15,11 +15,40 @@ void MqttConfig::registerHandler(const char* topic, MqttHandler handler) {
     handlers[String(topic)] = handler;
 }
 
+void MqttConfig::onMessage(char* topic, byte* payload, unsigned int length) {
+    Serial.print("[MQTT] ");
+    Serial.print(topic);
+    Serial.print(" => ");
+
+    for (unsigned int i = 0; i < length; i++) {
+        Serial.print((char)payload[i]);
+    }
+    Serial.println();
+
+    auto it = handlers.find(String(topic));
+    if (it != handlers.end()) {
+        it->second(topic, payload, length);
+    } else {
+        Serial.println("[MQTT] No handler for this topic");
+    }
+}
+
 
 void MqttConfig::loop() {
     if (!mqtt.connected()) {
         reconnect();
+        return;
     }
+
+    if (!subscribed) {
+        for (auto& it : handlers) {
+            mqtt.subscribe(it.first.c_str());
+            Serial.print("[MQTT] Subscribed: ");
+            Serial.println(it.first);
+        }
+        subscribed = true;
+    }
+
     mqtt.loop();
 }
 
@@ -59,22 +88,4 @@ bool MqttConfig::publish(const char* topic, const char* payload) {
 
 bool MqttConfig::connected() {
     return mqtt.connected();
-}
-
-void MqttConfig::onMessage(char* topic, byte* payload, unsigned int length) {
-    Serial.print("[MQTT] ");
-    Serial.print(topic);
-    Serial.print(" => ");
-
-    for (unsigned int i = 0; i < length; i++) {
-        Serial.print((char)payload[i]);
-    }
-    Serial.println();
-
-    auto it = handlers.find(String(topic));
-    if (it != handlers.end()) {
-        it->second(topic, payload, length);
-    } else {
-        Serial.println("[MQTT] No handler for this topic");
-    }
 }

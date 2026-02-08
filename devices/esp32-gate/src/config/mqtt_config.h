@@ -28,4 +28,5 @@ private:
 
     static std::map<String, MqttHandler> handlers;
     PubSubClient mqtt;
+    bool subscribed = false;
 };

@@ -13,12 +13,13 @@ enum class HandshakeStatus {
 };
 
 struct HandshakeRequest {
-    std::string device_id;
+    std::string device_name;
     uint64_t timestamp;          // epoch seconds
+    std::string mac_id;
 };
 
 struct HandshakeResponse {
-    std::string device_id;
+    std::string device_name;
     HandshakeStatus status;
     std::string session_token;
     uint64_t expires_at;         // epoch seconds
@@ -26,7 +27,7 @@ struct HandshakeResponse {
 
 class HandshakeManager {
 public:
-    explicit HandshakeManager(const std::string& deviceId);
+    explicit HandshakeManager(const std::string& deviceName, const std::string&macId);
 
     // device → server
     std::string buildRequestPayload() const;
@@ -39,7 +40,8 @@ public:
     const std::string& getSessionToken() const;
 
 private:
-    std::string device_id;
+    std::string device_name;
+    std::string mac_id;
     std::string session_token;
     uint64_t expires_at = 0;
 };

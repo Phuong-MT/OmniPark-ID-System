@@ -2,8 +2,8 @@
 #include "handshake.h"
 #include <ctime>
 
-HandshakeManager::HandshakeManager(const std::string& deviceId)
-    : device_id(deviceId) {}
+HandshakeManager::HandshakeManager(const std::string& deviceName, const std::string&macId)
+    : device_name(deviceName), mac_id(macId) {}
 
 std::string HandshakeManager::buildRequestPayload() const {
     // {
@@ -12,11 +12,11 @@ std::string HandshakeManager::buildRequestPayload() const {
     //   "timestamp": 123456
     // }
 
-    StaticJsonDocument<256> doc;
+    StaticJsonDocument<300> doc;
     doc["type"] = "handshake_request";
-    doc["device_id"] = device_id.c_str();
+    doc["device_name"] = device_name.c_str();
     doc["timestamp"] = (uint64_t)time(nullptr);
-
+    doc["mac_id"] = mac_id.c_str();
     std::string out;
     serializeJson(doc, out);
     return out;
@@ -25,7 +25,7 @@ std::string HandshakeManager::buildRequestPayload() const {
 bool HandshakeManager::handleResponsePayload(const std::string& payload) {
     // {
     //   "type": "handshake_response",
-    //   "device_id": "...",
+    //   "device_name": "...",
     //   "status": "SUCCESS",
     //   "session_token": "...",
     //   "expires_at": 1700000000
