@@ -55,7 +55,7 @@ void setup() {
 
   //register handle callback message broker
   mqtt.registerHandler(
-    "device/handshake/ack",
+    HANDSHAKE_TOPIC_RESPONSE,
     [&](const char*, const uint8_t* payload, unsigned int length) {
       Serial.println("Handshake ack");
       std::string msg((char*)payload, length);
@@ -93,7 +93,7 @@ void loop() {
 
     Serial.println("[HS] Sending handshake...");
     mqtt.publish(
-        "device/handshake/req",
+        HANDSHAKE_TOPIC_REQUEST,
         hs.buildRequestPayload().c_str()
     );
 

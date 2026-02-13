@@ -2,9 +2,8 @@
 #include <string>
 #include <cstdint>
 
-#define HANDSHAKE_TOPIC        "omnipark-id-system/handshake"
-#define HANDSHAKE_REQUEST      "handshake_request"
-#define HANDSHAKE_RESPONSE     "handshake_response"
+#define HANDSHAKE_TOPIC_REQUEST        "omnipark-id-system/device/handshake/req"
+#define HANDSHAKE_TOPIC_RESPONSE       "omnipark-id-system/device/handshake/ack"
 
 enum class HandshakeStatus {
     SUCCESS,

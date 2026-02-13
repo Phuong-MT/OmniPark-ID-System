@@ -13,7 +13,7 @@ std::string HandshakeManager::buildRequestPayload() const {
     // }
 
     StaticJsonDocument<300> doc;
-    doc["type"] = "handshake_request";
+    doc["type"] = HANDSHAKE_TOPIC_REQUEST;
     doc["device_name"] = device_name.c_str();
     doc["timestamp"] = (uint64_t)time(nullptr);
     doc["mac_id"] = mac_id.c_str();
@@ -24,7 +24,7 @@ std::string HandshakeManager::buildRequestPayload() const {
 
 bool HandshakeManager::handleResponsePayload(const std::string& payload) {
     // {
-    //   "type": "handshake_response",
+    //   "type": "omnipark-id-system/handshake/response",
     //   "device_name": "...",
     //   "status": "SUCCESS",
     //   "session_token": "...",
