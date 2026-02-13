@@ -55,7 +55,7 @@ void setup() {
 
   //register handle callback message broker
   mqtt.registerHandler(
-    HANDSHAKE_TOPIC_RESPONSE,
+    HANDSHAKE_TOPIC_RESPONSE(String((uint32_t)ESP.getEfuseMac(), HEX).c_str()).c_str(),
     [&](const char*, const uint8_t* payload, unsigned int length) {
       Serial.println("Handshake ack");
       std::string msg((char*)payload, length);

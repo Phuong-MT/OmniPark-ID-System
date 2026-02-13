@@ -13,7 +13,7 @@ std::string HandshakeManager::buildRequestPayload() const {
     // }
 
     StaticJsonDocument<300> doc;
-    doc["type"] = HANDSHAKE_TOPIC_REQUEST;
+    doc["type"] = "GATE";
     doc["device_name"] = device_name.c_str();
     doc["timestamp"] = (uint64_t)time(nullptr);
     doc["mac_id"] = mac_id.c_str();

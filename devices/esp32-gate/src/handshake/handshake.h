@@ -3,7 +3,9 @@
 #include <cstdint>
 
 #define HANDSHAKE_TOPIC_REQUEST        "omnipark-id-system/device/handshake/req"
-#define HANDSHAKE_TOPIC_RESPONSE       "omnipark-id-system/device/handshake/ack"
+inline std::string HANDSHAKE_TOPIC_RESPONSE(const std::string& id) {
+    return "omnipark-id-system/device/handshake/" + id + "/ack";
+}  
 
 enum class HandshakeStatus {
     SUCCESS,
