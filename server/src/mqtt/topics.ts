@@ -1,4 +1,5 @@
 export const MQTT_TOPICS = {
-  HANDSHAKE_INIT: 'device/handshake/init',
-  HANDSHAKE_ACK: (id: string) => `device/${id}/handshake/ack`,
+  HANDSHAKE_INIT: 'omnipark-id-system/device/handshake/req',
+  HANDSHAKE_ACK: (id: string) =>
+    'omnipark-id-system/device/handshake/' + id + '/ack',
 };

@@ -59,8 +59,8 @@ export class Device {
   //   @Prop()
   //   ipAddress?: string;
 
-  //   @Prop()
-  //   lastSeenAt?: Date;
+  @Prop()
+  lastSeenAt?: Date;
 
   @Prop({ default: false })
   isOnline: boolean;

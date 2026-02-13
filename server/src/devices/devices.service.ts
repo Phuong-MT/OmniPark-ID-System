@@ -99,22 +99,24 @@ export class DevicesService {
   async findOrCreate(payload: {
     macAddress: string;
     type: string;
+    deviceName: string;
     firmwareVersion?: string;
   }) {
     const device = await this.deviceModel.findOneAndUpdate(
       {
-        $or: [{ macAddress: payload.macAddress.toUpperCase() }],
+        macAddress: payload.macAddress.toUpperCase(),
       },
       {
         $setOnInsert: {
           macAddress: payload.macAddress.toUpperCase(),
           type: payload.type,
           status: DeviceStatus.ACTIVE,
-          isOnline: false,
           firmwareVersion: payload.firmwareVersion,
+          deviceName: payload.deviceName,
         },
         $set: {
           lastSeenAt: new Date(),
+          isOnline: true,
         },
       },
       {
