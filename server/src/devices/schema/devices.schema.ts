@@ -64,6 +64,25 @@ export class Device {
 
   @Prop({ default: false })
   isOnline: boolean;
+
+  // pair mode
+  @Prop({ default: false })
+  isPairing: boolean;
+
+  @Prop({ required: true, })
+  hostname: string;
+
+  @Prop({ required: true, })
+  localIp: string;
+
+  @Prop({ required: true, })
+  subnetMask: string;
+
+  @Prop({ index: true })
+  pairToken?: string;
+
+  @Prop()
+  pairTokenExpiresAt?: Date;
 }
 
 export const DeviceSchema = SchemaFactory.createForClass(Device);
@@ -71,3 +90,5 @@ export const DeviceSchema = SchemaFactory.createForClass(Device);
 DeviceSchema.index({ tenantCode: 1, type: 1 });
 DeviceSchema.index({ tenantCode: 1, status: 1 });
 DeviceSchema.index({ tenantCode: 1, isOnline: 1 });
+DeviceSchema.index({ pairToken: 1 }, { sparse: true });
+DeviceSchema.index({ macAddress: 1 }, { unique: true });

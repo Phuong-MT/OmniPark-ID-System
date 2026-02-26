@@ -2,8 +2,10 @@
 #include "config/wifi_config.h"
 #include "config/mqtt_config.h"
 #include "handshake/handshake.h"
+#include "pairManager/pairManager.h"
 #include <string>
 #include <ctime>
+#include <ArduinoJson.h>
 
 using namespace std;
 
@@ -16,8 +18,14 @@ MqttConfig mqtt(net);
 String clientId = "ESP32_GATE_" + String((uint32_t)ESP.getEfuseMac(), HEX);
 HandshakeManager hs(clientId.c_str(), String((uint32_t)ESP.getEfuseMac(), HEX).c_str());
 
+PairingHandler pairing(mqtt, "GATE", "OMNIPARK_DEMO"); // Hardcoded tenant for now, should come from config
+
 unsigned long lastHandshakeMs = 0;
 const unsigned long HANDSHAKE_INTERVAL = 20000; // 20s
+
+
+unsigned long lastHeartbeatMs = 0;
+const unsigned long HEARTBEAT_INTERVAL = 30000; // 30s
 
 void setup() {
   Serial.begin(115200);
@@ -66,21 +74,24 @@ void setup() {
     }
   );
 
+
+  pairing.begin();
   mqtt.begin();
 }
 
 void loop() {
   Serial.println("System Running...");
   
-
-  digitalWrite(2, HIGH);
+  digitalWrite(LED_PIN, HIGH);
   delay(500);
-  digitalWrite(2, LOW);
+  digitalWrite(LED_PIN, LOW);
   delay(500);
   
-   mqtt.loop();
+  mqtt.loop();
+  pairing.loop();
 
   if (!wifi.connected()) return;
+  if (!pairing.isPaired()) return;
 
   unsigned long now = millis();
   
@@ -98,5 +109,22 @@ void loop() {
     );
 
     lastHandshakeMs = now;
+  }
+
+  // Heartbeat after paired
+  if (now - lastHeartbeatMs > HEARTBEAT_INTERVAL) {
+    Serial.println("[Heartbeat] Sending...");
+    
+    String topic = "iot/OMNIPARK_DEMO/GATE/" + clientId + "/heartbeat";
+    StaticJsonDocument<128> doc;
+    doc["uptime"] = now / 1000;
+    doc["ip"] = WiFi.localIP().toString();
+    doc["rssi"] = WiFi.RSSI();
+    
+    char buffer[128];
+    serializeJson(doc, buffer);
+    mqtt.publish(topic.c_str(), buffer);
+
+    lastHeartbeatMs = now;
   }
 }

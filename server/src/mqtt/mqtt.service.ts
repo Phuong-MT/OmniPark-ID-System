@@ -20,7 +20,7 @@ interface Route {
 
 @Injectable()
 export class MqttService implements OnModuleInit, OnModuleDestroy {
-  private readonly logger = new Logger('MQTT');
+  private readonly logger = new Logger(MqttService.name);
   private client!: mqtt.MqttClient;
   private routes: Route[] = [];
 

@@ -13,7 +13,7 @@ export class DevicesService {
   constructor(
     @InjectModel(Device.name, DBName.omniparkIDSystem)
     private readonly deviceModel: Model<DeviceDocument>,
-  ) {}
+  ) { }
 
   // =========================
   // CREATE DEVICE
@@ -129,15 +129,89 @@ export class DevicesService {
   }
 
   // =========================
-  // UPDATE ONLINE STATUS (MQTT heartbeat)
+  // HANDLE PAIR REQUEST (Forwarded by Gateway)
   // =========================
-  async updateOnlineStatus(deviceId: string, isOnline: boolean) {
-    return this.deviceModel.updateOne(
-      { deviceId },
+  async handlePairRequest(payload: {
+    tenantCode: string;
+    macAddress: string;
+    type: string;
+    deviceName?: string;
+  }) {
+    const macUpper = payload.macAddress.toUpperCase();
+    const pairToken = Math.random().toString(36).substring(2, 10).toUpperCase(); // Short-lived 8-char token
+    const pairTokenExpiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    const device = await this.deviceModel.findOneAndUpdate(
+      { macAddress: macUpper },
       {
-        isOnline,
-        lastSeenAt: new Date(),
+        $setOnInsert: {
+          macAddress: macUpper,
+          type: payload.type,
+          tenantCode: payload.tenantCode,
+          status: DeviceStatus.INACTIVE, // Not active until token is confirmed
+          deviceName: payload.deviceName || `NEW_${payload.type}_${macUpper.slice(-5)}`,
+          hostname: `omnipark-${macUpper.replace(/:/g, '').toLowerCase()}`,
+          localIp: '0.0.0.0',
+          subnetMask: '255.255.255.0',
+        },
+        $set: {
+          pairToken,
+          pairTokenExpiresAt,
+          isPairing: true,
+          lastSeenAt: new Date(),
+        },
+      },
+      {
+        upsert: true,
+        new: true,
       },
     );
+
+    return device;
+  }
+
+  // =========================
+  // ACTIVATE DEVICE (Confirm token)
+  // =========================
+  async activateDevice(macAddress: string, token: string) {
+    const device = await this.deviceModel.findOne({
+      macAddress: macAddress.toUpperCase(),
+      pairToken: token,
+      pairTokenExpiresAt: { $gt: new Date() },
+    });
+
+    if (!device) {
+      throw new NotFoundException('Invalid or expired pair token');
+    }
+
+    device.status = DeviceStatus.ACTIVE;
+    device.isPairing = false;
+    device.pairToken = undefined;
+    device.pairTokenExpiresAt = undefined;
+    device.isOnline = true;
+    device.lastSeenAt = new Date();
+
+    await device.save();
+    return device;
+  }
+
+  /*
+  Convert IP address to long integer
+  */
+  ipToLong(ipAddress: string): number {
+    return ipAddress
+      .split('.')
+      .reduce((acc, octet) => (acc << 8) + parseInt(octet, 10), 0) >>> 0; // >>> 0 forces unsigned 32-bit int
+  }
+  isSameSubnet(ip1: string, ip2: string, subnetMask: string): boolean {
+    try {
+      const ip1Long = this.ipToLong(ip1);
+      const ip2Long = this.ipToLong(ip2);
+      const maskLong = this.ipToLong(subnetMask);
+
+      return (ip1Long & maskLong) === (ip2Long & maskLong);
+    } catch (error) {
+      return false;
+    }
   }
 }

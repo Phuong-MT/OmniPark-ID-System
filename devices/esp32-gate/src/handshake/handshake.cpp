@@ -6,11 +6,6 @@ HandshakeManager::HandshakeManager(const std::string& deviceName, const std::str
     : device_name(deviceName), mac_id(macId) {}
 
 std::string HandshakeManager::buildRequestPayload() const {
-    // {
-    //   "type": "handshake_request",
-    //   "device_id": "...",
-    //   "timestamp": 123456
-    // }
 
     StaticJsonDocument<300> doc;
     doc["type"] = "GATE";
@@ -23,14 +18,6 @@ std::string HandshakeManager::buildRequestPayload() const {
 }
 
 bool HandshakeManager::handleResponsePayload(const std::string& payload) {
-    // {
-    //   "type": "omnipark-id-system/handshake/response",
-    //   "device_name": "...",
-    //   "status": "SUCCESS",
-    //   "session_token": "...",
-    //   "expires_at": 1700000000
-    // }
-
     StaticJsonDocument<384> doc;
     DeserializationError err = deserializeJson(doc, payload);
 
