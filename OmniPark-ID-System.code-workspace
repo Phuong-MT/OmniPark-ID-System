@@ -4,7 +4,7 @@
             "path": "server",
         },
         {
-            "path": "web",
+            "path": "client",
         },
         {
             "path": "devices/esp32-gate",
