@@ -38,7 +38,10 @@ void WifiConfig::begin() {
 
     WiFiManager wm;
     wm.setConfigPortalTimeout(180);
-    bool res = wm.autoConnect("OmniPark-Setup");
+    String chipId = String((uint32_t)ESP.getEfuseMac(), HEX);
+    chipId.toUpperCase();
+    String ssid = "OmniPark-Setup-" + chipId.substring(chipId.length() - 4);
+    bool res = wm.autoConnect(ssid.c_str());
 
     if (!res) {
         Serial.println("WiFi connect failed. Restarting...");
