@@ -1,11 +1,12 @@
 #include <Arduino.h>
+#include <ArduinoJson.h>
+#include <string>
+#include <ctime>
 #include "config/wifi_config.h"
 #include "config/mqtt_config.h"
 #include "handshake/handshake.h"
 #include "pairManager/pairManager.h"
-#include <string>
-#include <ctime>
-#include <ArduinoJson.h>
+#include "_core/device_info.h"
 
 using namespace std;
 
@@ -14,6 +15,7 @@ using namespace std;
 WifiConfig wifi;
 WiFiClient net;
 MqttConfig mqtt(net);
+DeviceInfo& deviceInfo = DeviceInfo::getInstance();
 
 String clientId = "ESP32_GATE_" + String((uint32_t)ESP.getEfuseMac(), HEX);
 HandshakeManager hs(clientId.c_str(), String((uint32_t)ESP.getEfuseMac(), HEX).c_str());
@@ -66,10 +68,12 @@ void setup() {
     HANDSHAKE_TOPIC_RESPONSE(String((uint32_t)ESP.getEfuseMac(), HEX).c_str()).c_str(),
     [&](const char*, const uint8_t* payload, unsigned int length) {
       Serial.println("Handshake ack");
-      std::string msg((char*)payload, length);
+      string msg((char*)payload, length);
 
       if (hs.handleResponsePayload(msg)) {
         Serial.println("[HS] Handshake OK");
+      }else{
+        Serial.println("[HS] Handshake Failed");
       }
     }
   );
@@ -88,10 +92,8 @@ void loop() {
   delay(500);
   
   mqtt.loop();
-  pairing.loop();
 
   if (!wifi.connected()) return;
-  if (!pairing.isPaired()) return;
 
   unsigned long now = millis();
   
@@ -109,6 +111,11 @@ void loop() {
     );
 
     lastHandshakeMs = now;
+    return ;
+  }
+
+  if (!pairing.isPaired() && hs.hasValidSession(time(nullptr)) && deviceInfo.getPairing() == DevicePairState::PAIRING){
+    pairing.loop();
   }
 
   // Heartbeat after paired
