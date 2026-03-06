@@ -105,9 +105,17 @@ void loop() {
     now - lastHandshakeMs > HANDSHAKE_INTERVAL) {
 
     Serial.println("[HS] Sending handshake...");
+    
+    String hostname = WIFI_HOSTNAME;
+    std::string payload = hs.buildRequestPayload(
+      hostname.c_str(),
+      WiFi.subnetMask().toString().c_str(),
+      WiFi.localIP().toString().c_str()
+    );
+    
     mqtt.publish(
         HANDSHAKE_TOPIC_REQUEST,
-        hs.buildRequestPayload().c_str()
+        payload.c_str()
     );
 
     lastHandshakeMs = now;

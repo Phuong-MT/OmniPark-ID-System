@@ -6,13 +6,18 @@
 HandshakeManager::HandshakeManager(const std::string& deviceName, const std::string&macId)
     : device_name(deviceName), mac_id(macId) {}
 
-std::string HandshakeManager::buildRequestPayload() const {
+std::string HandshakeManager::buildRequestPayload(const std::string& hostname, const std::string& subnetMask, const std::string& localIp ) const {
 
-    StaticJsonDocument<300> doc;
+    StaticJsonDocument<512> doc;
     doc["type"] = "GATE";
     doc["device_name"] = device_name.c_str();
     doc["timestamp"] = (uint64_t)time(nullptr);
     doc["mac_id"] = mac_id.c_str();
+    
+    doc["hostname"] = hostname.c_str();
+    doc["subnetMask"] = subnetMask.c_str();
+    doc["localIp"] = localIp.c_str();
+
     std::string out;
     serializeJson(doc, out);
     return out;
