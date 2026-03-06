@@ -15,24 +15,50 @@ export class DevicesController {
   ) {}
   @MqttSubscribe(MQTT_TOPICS.HANDSHAKE_INIT)
   async handleHandshakeInit(message: HandshakeRequest) {
-    const { type, device_name, timestamp, mac_id } = message;
+    const {
+      type,
+      device_name,
+      timestamp,
+      mac_id,
+      hostname,
+      subnetMask,
+      localIp,
+    } = message;
 
     // add device or update last handshake
     const device = await this.devicesService.findOrCreate({
       macAddress: mac_id,
       type,
       deviceName: device_name,
+      hostname,
+      subnetMask,
+      localIp,
     });
     //set token
     //test token
     const accessToken = 'token';
     //send ack
     this.mqttService.publish(MQTT_TOPICS.HANDSHAKE_ACK(mac_id), {
-      type: 'handshake_response',
-      device_id: mac_id,
-      status: 'SUCCESS',
-      session_token: accessToken,
-      expires_at: 1700000000,
+      //device info
+      deviceId: device._id,
+      deviceName: device.deviceName,
+      deviceType: device.type,
+      macAddress: device.macAddress,
+
+      tenantCode: device.tenantCode || '',
+      status: device.status,
+
+      //test token
+      sessionToken: accessToken,
+      sessionTokenExpiresAt: 1700000000,
+
+      // network info
+      hostname: device.hostname,
+      localIp: device.localIp,
+      subnetMask: device.subnetMask,
+
+      //pair mode
+      pairState: device.pairState,
     });
   }
 

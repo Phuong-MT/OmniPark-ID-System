@@ -16,6 +16,12 @@ export enum DeviceStatus {
   BLOCKED = 'BLOCKED',
 }
 
+export enum DevicePairState {
+  UNPAIRED = 'UNPAIRED',
+  PAIRING = 'PAIRING',
+  PAIRED = 'PAIRED',
+}
+
 @Schema({
   timestamps: true,
   collection: 'devices',
@@ -44,7 +50,7 @@ export class Device {
     required: false,
     index: true,
   })
-  tenantCode: string; // PARKING_A / HOSPITAL_A
+  tenantCode?: string; // PARKING_A / HOSPITAL_A
 
   @Prop({
     enum: DeviceStatus,
@@ -62,21 +68,22 @@ export class Device {
   @Prop()
   lastSeenAt?: Date;
 
-  @Prop({ default: false })
-  isOnline: boolean;
-
-  // pair mode
-  @Prop({ default: false })
-  isPairing: boolean;
-
-  @Prop({ required: true, })
+  @Prop({ required: true })
   hostname: string;
 
-  @Prop({ required: true, })
+  @Prop({ required: true })
   localIp: string;
 
-  @Prop({ required: true, })
+  @Prop({ required: true })
   subnetMask: string;
+
+  // pair mode
+  @Prop({
+    enum: DevicePairState,
+    default: DevicePairState.UNPAIRED,
+    index: true,
+  })
+  pairState: DevicePairState;
 
   @Prop({ index: true })
   pairToken?: string;
@@ -89,6 +96,5 @@ export const DeviceSchema = SchemaFactory.createForClass(Device);
 
 DeviceSchema.index({ tenantCode: 1, type: 1 });
 DeviceSchema.index({ tenantCode: 1, status: 1 });
-DeviceSchema.index({ tenantCode: 1, isOnline: 1 });
 DeviceSchema.index({ pairToken: 1 }, { sparse: true });
 DeviceSchema.index({ macAddress: 1 }, { unique: true });

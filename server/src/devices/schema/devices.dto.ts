@@ -3,4 +3,8 @@ export interface HandshakeRequest {
   device_name: string;
   timestamp: number;
   mac_id: string;
+
+  hostname: string;
+  localIp: string;
+  subnetMask: string;
 }

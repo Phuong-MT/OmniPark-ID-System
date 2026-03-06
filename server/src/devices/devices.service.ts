@@ -13,7 +13,7 @@ export class DevicesService {
   constructor(
     @InjectModel(Device.name, DBName.omniparkIDSystem)
     private readonly deviceModel: Model<DeviceDocument>,
-  ) { }
+  ) {}
 
   // =========================
   // CREATE DEVICE
@@ -41,7 +41,6 @@ export class DevicesService {
       ...payload,
       macAddress: payload.macAddress.toUpperCase(),
       status: DeviceStatus.ACTIVE,
-      isOnline: false,
     });
 
     return device;
@@ -62,7 +61,7 @@ export class DevicesService {
 
     if (query.type) filter.type = query.type;
     if (query.status) filter.status = query.status;
-    if (query.isOnline !== undefined) filter.isOnline = query.isOnline;
+    // if (query.isOnline !== undefined) filter.isOnline = query.isOnline;
 
     return this.deviceModel.find(filter).sort({ createdAt: -1 }).lean();
   }
@@ -101,6 +100,11 @@ export class DevicesService {
     type: string;
     deviceName: string;
     firmwareVersion?: string;
+
+    //
+    subnetMask?: string;
+    hostname?: string;
+    localIp?: string;
   }) {
     const device = await this.deviceModel.findOneAndUpdate(
       {
@@ -116,7 +120,11 @@ export class DevicesService {
         },
         $set: {
           lastSeenAt: new Date(),
-          isOnline: true,
+          hostname:
+            payload.hostname ||
+            `omnipark-${payload.macAddress.replace(/:/g, '').toLowerCase()}`,
+          localIp: payload.localIp,
+          subnetMask: payload.subnetMask,
         },
       },
       {
@@ -149,7 +157,8 @@ export class DevicesService {
           type: payload.type,
           tenantCode: payload.tenantCode,
           status: DeviceStatus.INACTIVE, // Not active until token is confirmed
-          deviceName: payload.deviceName || `NEW_${payload.type}_${macUpper.slice(-5)}`,
+          deviceName:
+            payload.deviceName || `NEW_${payload.type}_${macUpper.slice(-5)}`,
           hostname: `omnipark-${macUpper.replace(/:/g, '').toLowerCase()}`,
           localIp: '0.0.0.0',
           subnetMask: '255.255.255.0',
@@ -185,10 +194,9 @@ export class DevicesService {
     }
 
     device.status = DeviceStatus.ACTIVE;
-    device.isPairing = false;
+    // device.isPairing = false;
     device.pairToken = undefined;
     device.pairTokenExpiresAt = undefined;
-    device.isOnline = true;
     device.lastSeenAt = new Date();
 
     await device.save();
@@ -199,9 +207,11 @@ export class DevicesService {
   Convert IP address to long integer
   */
   ipToLong(ipAddress: string): number {
-    return ipAddress
-      .split('.')
-      .reduce((acc, octet) => (acc << 8) + parseInt(octet, 10), 0) >>> 0; // >>> 0 forces unsigned 32-bit int
+    return (
+      ipAddress
+        .split('.')
+        .reduce((acc, octet) => (acc << 8) + parseInt(octet, 10), 0) >>> 0
+    ); // >>> 0 forces unsigned 32-bit int
   }
   isSameSubnet(ip1: string, ip2: string, subnetMask: string): boolean {
     try {
