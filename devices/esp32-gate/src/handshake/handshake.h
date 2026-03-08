@@ -31,7 +31,7 @@ public:
     explicit HandshakeManager(const std::string& deviceName, const std::string&macId);
 
     // device → server
-    std::string buildRequestPayload() const;
+    std::string buildRequestPayload(const std::string& hostname, const std::string& subnetMask, const std::string& localIp) const;
 
     // server → device
     bool handleResponsePayload(const std::string& payload);

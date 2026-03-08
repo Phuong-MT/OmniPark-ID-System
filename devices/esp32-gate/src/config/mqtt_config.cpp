@@ -55,11 +55,21 @@ void MqttConfig::loop() {
 void MqttConfig::reconnect() {
     String clientId = "ESP32_GATE_";
     clientId += String((uint32_t)ESP.getEfuseMac(), HEX);
+    
+    // LWT setup
+    String tenantCode = "OMNIPARK_DEMO"; // Should be dynamic
+    String lwtTopic = "iot/" + tenantCode + "/GATE/" + clientId + "/status";
+    String lwtPayload = "{\"isOnline\": false, \"reason\": \"LWT\"}";
+
     while (!mqtt.connected()) {
         Serial.print("[MQTT] Connecting... ");
 
-        if (mqtt.connect(clientId.c_str(), MQTT_USER, MQTT_PASS)) {
+        if (mqtt.connect(clientId.c_str(), MQTT_USER, MQTT_PASS, lwtTopic.c_str(), 1, true, lwtPayload.c_str())) {
             Serial.println("OK");
+            
+            // Publish online status immediately
+            String onlinePayload = "{\"isOnline\": true}";
+            mqtt.publish(lwtTopic.c_str(), onlinePayload.c_str(), true);
         } else {
             Serial.print("FAILED rc=");
             Serial.println(mqtt.state());
@@ -67,6 +77,7 @@ void MqttConfig::reconnect() {
         }
     }
 }
+
 
 bool MqttConfig::subscribe(const char* topic, uint8_t qos) {
     if (!mqtt.connected()) return false;

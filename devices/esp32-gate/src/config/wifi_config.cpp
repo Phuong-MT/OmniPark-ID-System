@@ -38,7 +38,8 @@ void WifiConfig::begin() {
 
     WiFiManager wm;
     wm.setConfigPortalTimeout(180);
-    bool res = wm.autoConnect("OmniPark-Setup");
+    String ssid = WIFI_HOSTNAME;
+    bool res = wm.autoConnect(ssid.c_str());
 
     if (!res) {
         Serial.println("WiFi connect failed. Restarting...");
