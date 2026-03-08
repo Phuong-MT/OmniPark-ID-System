@@ -1,9 +1,33 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import cookieParser from 'cookie-parser';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  app.use(cookieParser());
+
+  app.enableCors({
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+
+      if (
+        origin.startsWith('http://localhost') ||
+        origin.startsWith('http://127.0.0.1')
+      ) {
+        callback(null, true);
+      }
+      else if (
+        origin.startsWith("https://omnipark-id-system") ||
+        origin.startsWith("http://omnipark-id-system")
+      ) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
+    credentials: true,
+  });
 
   const config = new DocumentBuilder()
     .setTitle('Omnipark ID System')
