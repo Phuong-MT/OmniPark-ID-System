@@ -85,7 +85,7 @@ export class Device {
   })
   pairState: DevicePairState;
 
-  @Prop({ index: true })
+  @Prop()
   pairToken?: string;
 
   @Prop()
@@ -96,5 +96,4 @@ export const DeviceSchema = SchemaFactory.createForClass(Device);
 
 DeviceSchema.index({ tenantCode: 1, type: 1 });
 DeviceSchema.index({ tenantCode: 1, status: 1 });
-DeviceSchema.index({ pairToken: 1 }, { sparse: true });
-DeviceSchema.index({ macAddress: 1 }, { unique: true });
+DeviceSchema.index({ pairToken: 1 }, { unique: true, sparse: true });
