@@ -9,7 +9,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export function LoginForm() {
-  const [tenantcode, setTenantcode] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [validationError, setValidationError] = useState("");
@@ -22,10 +21,6 @@ export function LoginForm() {
     e.preventDefault();
     setValidationError("");
 
-    if (!tenantcode.trim()) {
-      setValidationError("Please enter a tenant code");
-      return;
-    }
     if (!email.includes("@")) {
       setValidationError("Please enter a valid email address");
       return;
@@ -35,7 +30,7 @@ export function LoginForm() {
       return;
     }
 
-    const resultAction = await dispatch(loginAsync({ email, password, tenantcode }));
+    const resultAction = await dispatch(loginAsync({ email, password }));
 
     if (loginAsync.fulfilled.match(resultAction)) {
       router.push("/dashboard");
@@ -51,19 +46,6 @@ export function LoginForm() {
 
       <form className="space-y-6" onSubmit={handleSubmit}>
         <div className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="tenantcode">Tenant Code</Label>
-            <Input
-              id="tenantcode"
-              type="text"
-              placeholder="e.g. OMNI-001"
-              value={tenantcode}
-              onChange={(e) => setTenantcode(e.target.value)}
-              disabled={status === "loading"}
-              required
-            />
-          </div>
-
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input
