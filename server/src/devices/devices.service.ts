@@ -203,6 +203,22 @@ export class DevicesService {
     return device;
   }
 
+  async updateHeartbeat(payload: { mac: string }): Promise<void> {
+    const query = {};
+
+    if (payload.mac) {
+      query['macAddress'] = payload.mac.toUpperCase();
+    }
+
+    const device = this.deviceModel
+      .findOneAndUpdate(query, {
+        set: {
+          lastSeenAt: new Date(),
+        },
+      })
+      .exec();
+  }
+
   /*
   Convert IP address to long integer
   */

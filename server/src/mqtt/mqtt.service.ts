@@ -18,6 +18,12 @@ interface Route {
   handler: Function;
 }
 
+enum Qos {
+  AT_MOST_ONCE = 0,
+  AT_LEAST_ONCE = 1,
+  EXACTLY_ONCE = 2,
+}
+
 @Injectable()
 export class MqttService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(MqttService.name);
@@ -100,8 +106,10 @@ export class MqttService implements OnModuleInit, OnModuleDestroy {
     this.logger.warn(`No handler for topic ${topic}`);
   }
 
-  publish(topic: string, data: any) {
-    this.client.publish(topic, JSON.stringify(data));
+  publish(topic: string, data: any, qos?: Qos) {
+    this.client.publish(topic, JSON.stringify(data), {
+      qos: qos ?? 1,
+    });
   }
 
   onModuleDestroy() {

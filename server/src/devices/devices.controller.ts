@@ -25,6 +25,8 @@ export class DevicesController {
       localIp,
     } = message;
 
+    this.logger.log('handshake init recevid', message);
+
     // add device or update last handshake
     const device = await this.devicesService.findOrCreate({
       macAddress: mac_id,
@@ -38,7 +40,9 @@ export class DevicesController {
     //test token
     const accessToken = 'token';
     //send ack
-    this.mqttService.publish(MQTT_TOPICS.HANDSHAKE_ACK(mac_id), {
+    this.logger.log(MQTT_TOPICS.HANDSHAKE_ACK(mac_id));
+
+    const ackPayload = {
       //device info
       deviceId: device._id,
       deviceName: device.deviceName,
@@ -59,7 +63,11 @@ export class DevicesController {
 
       //pair mode
       pairState: device.pairState,
-    });
+    };
+
+    this.logger.log('handshake ack payload', ackPayload);
+    this.mqttService.publish('test/topic', ackPayload);
+    // this.mqttService.publish('test/topic', { hello: 'hi' });
   }
 
   /**
@@ -119,5 +127,13 @@ export class DevicesController {
     } catch (error) {
       this.logger.error(`Activation failed for ${mac}: ${error.message}`);
     }
+  }
+
+  /*
+  
+  */
+  @MqttSubscribe('iot/hearbeat/:mac')
+  async handleHearbeat(payload: { mac: string }) {
+    this.devicesService.updateHeartbeat(payload);
   }
 }
