@@ -18,7 +18,8 @@ MqttConfig mqtt(net);
 DeviceInfo& deviceInfo = DeviceInfo::getInstance();
 
 String clientId = "ESP32_GATE_" + String((uint32_t)ESP.getEfuseMac(), HEX);
-HandshakeManager hs(clientId.c_str(), String((uint32_t)ESP.getEfuseMac(), HEX).c_str());
+String macStr = String((uint32_t)ESP.getEfuseMac(), HEX);
+HandshakeManager hs(clientId.c_str(), macStr.c_str());
 
 PairingHandler pairing(mqtt, "GATE", "OMNIPARK_DEMO"); // Hardcoded tenant for now, should come from config
 
@@ -63,13 +64,13 @@ void setup() {
 
   Serial.println("Setup wifi completed.");
 
+  
   //register handle callback message broker
   mqtt.registerHandler(
-    HANDSHAKE_TOPIC_RESPONSE(String((uint32_t)ESP.getEfuseMac(), HEX).c_str()).c_str(),
+    HANDSHAKE_TOPIC_RESPONSE(macStr.c_str()).c_str(),
     [&](const char*, const uint8_t* payload, unsigned int length) {
       Serial.println("Handshake ack");
       string msg((char*)payload, length);
-
       if (hs.handleResponsePayload(msg)) {
         Serial.println("[HS] Handshake OK");
       }else{
@@ -77,19 +78,28 @@ void setup() {
       }
     }
   );
-
-
-  pairing.begin();
-  mqtt.begin();
-}
+  
+  // mqtt.registerHandler(
+    //   "test/topic",
+    //   [&](const char*, const uint8_t* payload, unsigned int length) {
+      //     Serial.println("Received message on test/topic");
+      //     string msg((char*)payload, length);
+      //     Serial.println("Payload: " + String(msg.c_str()));
+      //   }
+      // );
+      
+      
+      // pairing.begin();
+      mqtt.begin();
+    }
 
 void loop() {
-  Serial.println("System Running...");
-  
-  digitalWrite(LED_PIN, HIGH);
-  delay(500);
-  digitalWrite(LED_PIN, LOW);
-  delay(500);
+  // Serial.println("System Running...");
+
+  // digitalWrite(LED_PIN, HIGH);
+  // delay(200);
+  // digitalWrite(LED_PIN, LOW);
+  // delay(200);
   
   mqtt.loop();
 
@@ -97,9 +107,9 @@ void loop() {
 
   unsigned long now = millis();
   
-  Serial.println("now: "+String(now));
+  // Serial.println("now: "+String(now));
   
-  Serial.println("now: "+String(lastHandshakeMs));
+  // Serial.println("now: "+String(lastHandshakeMs));
   
   if (!hs.hasValidSession(std::time(nullptr)) &&
     now - lastHandshakeMs > HANDSHAKE_INTERVAL) {
@@ -119,27 +129,27 @@ void loop() {
     );
 
     lastHandshakeMs = now;
-    return ;
+    // return ;
   }
 
-  if (!pairing.isPaired() && hs.hasValidSession(time(nullptr)) && deviceInfo.getPairing() == DevicePairState::PAIRING){
-    pairing.loop();
-  }
+  // if (!pairing.isPaired() && hs.hasValidSession(time(nullptr)) && deviceInfo.getPairing() == DevicePairState::PAIRING){
+  //   pairing.loop();
+  //   return;
+  // }
 
   // Heartbeat after paired
-  if (now - lastHeartbeatMs > HEARTBEAT_INTERVAL) {
-    Serial.println("[Heartbeat] Sending...");
+  // if (now - lastHeartbeatMs > HEARTBEAT_INTERVAL) {
+  //   Serial.println("[Heartbeat] Sending...");
     
-    String topic = "iot/OMNIPARK_DEMO/GATE/" + clientId + "/heartbeat";
-    StaticJsonDocument<128> doc;
-    doc["uptime"] = now / 1000;
-    doc["ip"] = WiFi.localIP().toString();
-    doc["rssi"] = WiFi.RSSI();
-    
-    char buffer[128];
-    serializeJson(doc, buffer);
-    mqtt.publish(topic.c_str(), buffer);
+  //   String topic = "iot/heartbeat/"+ deviceInfo.getMacAddress();
+  //   StaticJsonDocument<128> doc;
 
-    lastHeartbeatMs = now;
-  }
+  //   doc["mac"] = deviceInfo.getMacAddress().c_str();
+
+  //   char buffer[128];
+  //   serializeJson(doc, buffer);
+  //   mqtt.publish(topic.c_str(), buffer);
+
+  //   lastHeartbeatMs = now;
+  // }
 }

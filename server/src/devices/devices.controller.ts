@@ -66,8 +66,7 @@ export class DevicesController {
     };
 
     this.logger.log('handshake ack payload', ackPayload);
-    this.mqttService.publish('test/topic', ackPayload);
-    // this.mqttService.publish('test/topic', { hello: 'hi' });
+    this.mqttService.publish(MQTT_TOPICS.HANDSHAKE_ACK(mac_id), ackPayload);
   }
 
   /**
@@ -132,8 +131,8 @@ export class DevicesController {
   /*
   
   */
-  @MqttSubscribe('iot/hearbeat/:mac')
-  async handleHearbeat(payload: { mac: string }) {
+  @MqttSubscribe('iot/heartbeat/:mac')
+  async handleHeartbeat(payload: { mac: string }) {
     this.devicesService.updateHeartbeat(payload);
   }
 }
