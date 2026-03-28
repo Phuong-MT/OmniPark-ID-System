@@ -13,14 +13,14 @@ export interface LoginResponse {
 
 export const loginAsync = createAsyncThunk(
     'auth/loginAsync',
-    async ({ email, password }: Record<string, string>, { rejectWithValue }) => {
+    async ({ email, password, tenantcode }: Record<string, string>, { rejectWithValue }) => {
         try {
             const response = await fetch('/auth/login', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ email, password }),
+                body: JSON.stringify({ email, password, tenantcode }),
             });
 
             if (!response.ok) {
