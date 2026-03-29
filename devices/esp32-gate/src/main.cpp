@@ -28,7 +28,8 @@ const unsigned long HANDSHAKE_INTERVAL = 20000; // 20s
 
 
 unsigned long lastHeartbeatMs = 0;
-const unsigned long HEARTBEAT_INTERVAL = 30000; // 30s
+const unsigned long HEARTBEAT_INTERVALS[] = {60000, 120000, 300000}; // 1m, 2m, 5m
+int currentHeartbeatIndex = 0;
 
 void setup() {
   Serial.begin(115200);
@@ -117,7 +118,7 @@ void loop() {
   // }
 
   // Heartbeat after handshake
-  if (hs.hasValidSession(std::time(nullptr)) && now - lastHeartbeatMs > HEARTBEAT_INTERVAL) {
+  if (hs.hasValidSession(std::time(nullptr)) && now - lastHeartbeatMs > HEARTBEAT_INTERVALS[currentHeartbeatIndex]) {
     Serial.println("[Heartbeat] Sending...");
     
     String topic = "iot/heartbeat/" + macStr;
@@ -130,5 +131,6 @@ void loop() {
     mqtt.publish(topic.c_str(), buffer);
 
     lastHeartbeatMs = now;
+    currentHeartbeatIndex = (currentHeartbeatIndex + 1) % 3;
   }
 }
