@@ -17,7 +17,7 @@ async function run() {
 
   console.log('Connecting to database...');
   const mongoose = await connect(uri, {
-    dbName: "omnipark-id-system",
+    dbName: 'omnipark-id-system',
   });
 
   try {
@@ -53,7 +53,7 @@ async function run() {
     }
 
     console.log('Hashing password...');
-    const passwordHash = await bcrypt.hash('admin', 10);
+    const passwordHash = await bcrypt.hash('admin@123', 10);
 
     console.log('Creating super admin user...');
     await userCollection.insertOne({

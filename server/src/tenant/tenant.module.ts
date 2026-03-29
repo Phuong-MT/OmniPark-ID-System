@@ -6,13 +6,13 @@ import { Tenant, TenantSchema } from './schema/tenant.schema';
 import { DBName } from 'src/utils/connectDB';
 
 @Module({
-  imports: [
-    MongooseModule.forFeature(
-      [{ name: Tenant.name, schema: TenantSchema }],
-      DBName.omniparkIDSystem,
-    ),
-  ],
-  controllers: [TenantController],
-  providers: [TenantService],
+    imports: [
+        MongooseModule.forFeature(
+            [{ name: Tenant.name, schema: TenantSchema }],
+            DBName.omniparkIDSystem,
+        ),
+    ],
+    controllers: [TenantController],
+    providers: [TenantService],
 })
 export class TenantModule {}

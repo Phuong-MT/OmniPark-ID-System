@@ -9,9 +9,12 @@ export class UserService {
     constructor(
         @InjectModel(User.name, DBName.omniparkIDSystem)
         private readonly userModel: Model<UserDocument>,
-    ) { }
+    ) {}
 
-    async findByUsername(username: string, tenantCode?: string): Promise<UserDocument | null> {
+    async findByUsername(
+        username: string,
+        tenantCode?: string,
+    ): Promise<UserDocument | null> {
         const query: any = { username };
         if (tenantCode) {
             query.tenantCode = new Types.ObjectId(tenantCode);

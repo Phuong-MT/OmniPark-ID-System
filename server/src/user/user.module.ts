@@ -6,14 +6,14 @@ import { User, UserSchema } from './schema/user.schema';
 import { DBName } from 'src/utils/connectDB';
 
 @Module({
-  imports: [
-    MongooseModule.forFeature(
-      [{ name: User.name, schema: UserSchema }],
-      DBName.omniparkIDSystem,
-    ),
-  ],
-  controllers: [UserController],
-  providers: [UserService],
-  exports: [UserService],
+    imports: [
+        MongooseModule.forFeature(
+            [{ name: User.name, schema: UserSchema }],
+            DBName.omniparkIDSystem,
+        ),
+    ],
+    controllers: [UserController],
+    providers: [UserService],
+    exports: [UserService],
 })
-export class UserModule { }
+export class UserModule {}

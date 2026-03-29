@@ -37,22 +37,31 @@ describe('UserService', () => {
     describe('findByUsername', () => {
         it('should find user by username', async () => {
             const mockResult = { username: 'testuser' };
-            model.findOne.mockReturnValue({ exec: jest.fn().mockResolvedValue(mockResult) });
+            model.findOne.mockReturnValue({
+                exec: jest.fn().mockResolvedValue(mockResult),
+            });
 
             const result = await service.findByUsername('testuser');
 
-            expect(model.findOne).toHaveBeenCalledWith({ username: 'testuser' });
+            expect(model.findOne).toHaveBeenCalledWith({
+                username: 'testuser',
+            });
             expect(result).toEqual(mockResult);
         });
 
         it('should find user by username and tenantCode', async () => {
             const mockResult = { username: 'testuser' };
-            model.findOne.mockReturnValue({ exec: jest.fn().mockResolvedValue(mockResult) });
+            model.findOne.mockReturnValue({
+                exec: jest.fn().mockResolvedValue(mockResult),
+            });
             const tenantCode = new Types.ObjectId().toHexString();
 
             const result = await service.findByUsername('testuser', tenantCode);
 
-            expect(model.findOne).toHaveBeenCalledWith({ username: 'testuser', tenantCode: new Types.ObjectId(tenantCode) });
+            expect(model.findOne).toHaveBeenCalledWith({
+                username: 'testuser',
+                tenantCode: new Types.ObjectId(tenantCode),
+            });
             expect(result).toEqual(mockResult);
         });
     });
@@ -60,7 +69,9 @@ describe('UserService', () => {
     describe('findById', () => {
         it('should find user by id', async () => {
             const mockResult = { _id: '123' };
-            model.findById.mockReturnValue({ exec: jest.fn().mockResolvedValue(mockResult) });
+            model.findById.mockReturnValue({
+                exec: jest.fn().mockResolvedValue(mockResult),
+            });
 
             const result = await service.findById('123');
 

@@ -16,10 +16,9 @@ async function bootstrap() {
         origin.startsWith('http://127.0.0.1')
       ) {
         callback(null, true);
-      }
-      else if (
-        origin.startsWith("https://omnipark-id-system") ||
-        origin.startsWith("http://omnipark-id-system")
+      } else if (
+        origin.startsWith('https://omnipark-id-system') ||
+        origin.startsWith('http://omnipark-id-system')
       ) {
         callback(null, true);
       } else {
@@ -46,6 +45,6 @@ async function bootstrap() {
     },
   });
 
-  await app.listen(process.env.PORT ?? 3000);
+  await app.listen(process.env.PORT ?? 3000, '0.0.0.0');
 }
 bootstrap();

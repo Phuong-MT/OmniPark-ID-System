@@ -4,7 +4,10 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
 
 @Injectable()
-export class JwtRefreshStrategy extends PassportStrategy(Strategy, 'jwt-refresh') {
+export class JwtRefreshStrategy extends PassportStrategy(
+    Strategy,
+    'jwt-refresh',
+) {
     constructor(configService: ConfigService) {
         super({
             jwtFromRequest: ExtractJwt.fromExtractors([
@@ -17,7 +20,9 @@ export class JwtRefreshStrategy extends PassportStrategy(Strategy, 'jwt-refresh'
                 },
             ]),
             ignoreExpiration: false,
-            secretOrKey: configService.get<string>('JWT_REFRESH_SECRET') || 'defaultSecret',
+            secretOrKey:
+                configService.get<string>('JWT_REFRESH_SECRET') ||
+                'defaultSecret',
             passReqToCallback: true,
         });
     }

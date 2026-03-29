@@ -4,41 +4,41 @@ import { Document } from 'mongoose';
 export type TenantDocument = Tenant & Document;
 
 @Schema({
-  timestamps: true,
+    timestamps: true,
 })
 export class Tenant {
-  @Prop({ required: true })
-  name: string;
+    @Prop({ required: true })
+    name: string;
 
-  @Prop()
-  description?: string;
+    @Prop()
+    description?: string;
 
-  @Prop()
-  address?: string;
+    @Prop()
+    address?: string;
 
-  @Prop()
-  contactEmail?: string;
+    @Prop()
+    contactEmail?: string;
 
-  @Prop()
-  contactPhone?: string;
+    @Prop()
+    contactPhone?: string;
 
-  @Prop({
-    enum: ['ACTIVE', 'BLOCKED'],
-    default: 'ACTIVE',
-  })
-  status: string;
+    @Prop({
+        enum: ['ACTIVE', 'BLOCKED'],
+        default: 'ACTIVE',
+    })
+    status: string;
 
-  @Prop()
-  subscriptionPlan?: string;
+    @Prop()
+    subscriptionPlan?: string;
 
-  @Prop()
-  subscriptionExpireAt?: Date;
+    @Prop()
+    subscriptionExpireAt?: Date;
 
-  @Prop()
-  maxDevices?: number;
+    @Prop()
+    maxDevices?: number;
 
-  @Prop()
-  maxUsers?: number;
+    @Prop()
+    maxUsers?: number;
 }
 
 export const TenantSchema = SchemaFactory.createForClass(Tenant);
