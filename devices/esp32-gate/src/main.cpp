@@ -78,38 +78,17 @@ void setup() {
       }
     }
   );
-  
-  // mqtt.registerHandler(
-    //   "test/topic",
-    //   [&](const char*, const uint8_t* payload, unsigned int length) {
-      //     Serial.println("Received message on test/topic");
-      //     string msg((char*)payload, length);
-      //     Serial.println("Payload: " + String(msg.c_str()));
-      //   }
-      // );
-      
-      
-      // pairing.begin();
-      mqtt.begin();
+
+    // pairing.begin();
+    mqtt.begin();
     }
 
 void loop() {
-  // Serial.println("System Running...");
-
-  // digitalWrite(LED_PIN, HIGH);
-  // delay(200);
-  // digitalWrite(LED_PIN, LOW);
-  // delay(200);
-  
   mqtt.loop();
 
   if (!wifi.connected()) return;
 
   unsigned long now = millis();
-  
-  // Serial.println("now: "+String(now));
-  
-  // Serial.println("now: "+String(lastHandshakeMs));
   
   if (!hs.hasValidSession(std::time(nullptr)) &&
     now - lastHandshakeMs > HANDSHAKE_INTERVAL) {
@@ -129,7 +108,7 @@ void loop() {
     );
 
     lastHandshakeMs = now;
-    // return ;
+    return ;
   }
 
   // if (!pairing.isPaired() && hs.hasValidSession(time(nullptr)) && deviceInfo.getPairing() == DevicePairState::PAIRING){
