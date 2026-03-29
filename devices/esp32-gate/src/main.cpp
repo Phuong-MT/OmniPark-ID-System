@@ -95,11 +95,11 @@ void loop() {
 
     Serial.println("[HS] Sending handshake...");
     
-    String hostname = WIFI_HOSTNAME;
+    NetworkInfo net = wifi.get();
     std::string payload = hs.buildRequestPayload(
-      hostname.c_str(),
-      WiFi.subnetMask().toString().c_str(),
-      WiFi.localIP().toString().c_str()
+      net.ssid.c_str(),
+      net.subnetMask.c_str(),
+      net.ip.toString().c_str()
     );
     
     mqtt.publish(
