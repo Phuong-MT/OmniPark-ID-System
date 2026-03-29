@@ -132,7 +132,11 @@ export class DevicesController {
   
   */
   @MqttSubscribe('iot/heartbeat/:mac')
-  async handleHeartbeat(payload: { mac: string }) {
-    this.devicesService.updateHeartbeat(payload);
+  async handleHeartbeat(
+    payload: any,
+    context: { params: Record<string, string> },
+  ) {
+    const { mac } = context.params;
+    this.devicesService.updateHeartbeat({ mac, ...payload });
   }
 }

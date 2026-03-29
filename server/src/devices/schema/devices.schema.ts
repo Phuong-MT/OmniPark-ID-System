@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document } from 'mongoose';
+import { Document, Types } from 'mongoose';
 
 export type DeviceDocument = Device & Document;
 
@@ -49,8 +49,9 @@ export class Device {
   @Prop({
     required: false,
     index: true,
+    type: Types.ObjectId
   })
-  tenantCode?: string; // PARKING_A / HOSPITAL_A
+  tenantCode?: Types.ObjectId;
 
   @Prop({
     enum: DeviceStatus,

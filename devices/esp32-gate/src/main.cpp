@@ -116,19 +116,19 @@ void loop() {
   //   return;
   // }
 
-  // Heartbeat after paired
-  // if (now - lastHeartbeatMs > HEARTBEAT_INTERVAL) {
-  //   Serial.println("[Heartbeat] Sending...");
+  // Heartbeat after handshake
+  if (hs.hasValidSession(std::time(nullptr)) && now - lastHeartbeatMs > HEARTBEAT_INTERVAL) {
+    Serial.println("[Heartbeat] Sending...");
     
-  //   String topic = "iot/heartbeat/"+ deviceInfo.getMacAddress();
-  //   StaticJsonDocument<128> doc;
+    String topic = "iot/heartbeat/" + macStr;
+    StaticJsonDocument<128> doc;
 
-  //   doc["mac"] = deviceInfo.getMacAddress().c_str();
+    doc["mac"] = macStr.c_str();
 
-  //   char buffer[128];
-  //   serializeJson(doc, buffer);
-  //   mqtt.publish(topic.c_str(), buffer);
+    char buffer[128];
+    serializeJson(doc, buffer);
+    mqtt.publish(topic.c_str(), buffer);
 
-  //   lastHeartbeatMs = now;
-  // }
+    lastHeartbeatMs = now;
+  }
 }

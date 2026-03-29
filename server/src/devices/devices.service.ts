@@ -212,7 +212,7 @@ export class DevicesService {
 
     const device = this.deviceModel
       .findOneAndUpdate(query, {
-        set: {
+        $set: {
           lastSeenAt: new Date(),
         },
       })
