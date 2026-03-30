@@ -74,6 +74,13 @@ export class User {
     @Prop()
     blockReason?: string;
 
+    // verification code
+    @Prop()
+    verificationCode?: string;
+
+    @Prop()
+    verificationCodeExpiresAt?: Date;
+
     // soft delete
     @Prop({ default: false })
     isDeleted: boolean;

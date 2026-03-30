@@ -1,6 +1,6 @@
 import { Controller, Post, Body, Res, UseGuards, Req } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { LoginDto } from './dto/login.dto';
+import { LoginDto, SendCodeDto, LoginWithCodeDto, ResetPasswordDto } from './dto/login.dto';
 import type { Response, Request } from 'express';
 import { JwtRefreshGuard } from './guards/jwt-refresh.guard';
 
@@ -14,6 +14,53 @@ export class AuthController {
         @Res({ passthrough: true }) res: Response,
     ) {
         const user = await this.authService.validateUser(loginDto);
+        const tokens = await this.authService.login(user);
+        const isProd = process.env.NODE_ENV === 'production';
+
+        res.cookie('accessToken', tokens.accessToken, {
+            httpOnly: true,
+            secure: isProd,
+            sameSite: isProd ? 'none' : 'lax',
+            path: '/',
+        });
+
+        res.cookie('refreshToken', tokens.refreshToken, {
+            httpOnly: true,
+            secure: isProd,
+            sameSite: isProd ? 'none' : 'lax',
+            path: '/',
+        });
+
+        return { message: 'Login successful' };
+    }
+
+    @Post('send-code')
+    async sendVerificationCode(@Body() sendCodeDto: SendCodeDto) {
+        await this.authService.generateAndSendVerificationCode(sendCodeDto.email);
+        return { message: 'Verification code sent successfully' };
+    }
+
+    @Post('forgot-password/send-code')
+    async sendForgotPasswordCode(@Body() sendCodeDto: SendCodeDto) {
+        await this.authService.generateAndSendVerificationCode(sendCodeDto.email);
+        return { message: 'Verification code sent successfully' };
+    }
+
+    @Post('forgot-password/reset')
+    async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
+        await this.authService.resetPassword(resetPasswordDto);
+        return { message: 'Password has been reset successfully' };
+    }
+
+    @Post('login-with-code')
+    async loginWithCode(
+        @Body() loginWithCodeDto: LoginWithCodeDto,
+        @Res({ passthrough: true }) res: Response,
+    ) {
+        const user = await this.authService.validateCodeAndLogin(
+            loginWithCodeDto.email,
+            loginWithCodeDto.code,
+        );
         const tokens = await this.authService.login(user);
         const isProd = process.env.NODE_ENV === 'production';
 

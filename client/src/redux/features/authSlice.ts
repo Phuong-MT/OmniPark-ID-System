@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { loginAsync } from "./authThunks";
+import { loginAsync, sendVerificationCodeAsync, loginWithCodeAsync, sendForgotPasswordCodeAsync, resetPasswordAsync } from "./authThunks";
 
 export type Role = "POC" | "ADMIN" | "SUPER_ADMIN";
 
@@ -21,6 +21,9 @@ interface AuthState {
 		avatar: string;
 	} | null;
 	status: "idle" | "loading" | "succeeded" | "failed";
+	codeStatus: "idle" | "loading" | "succeeded" | "failed";
+	forgotPasswordCodeStatus: "idle" | "loading" | "succeeded" | "failed";
+	resetPasswordStatus: "idle" | "loading" | "succeeded" | "failed";
 	error: string | null;
 }
 
@@ -32,6 +35,9 @@ const initialState: AuthState = {
 		avatar: "https://i.pravatar.cc/150?u=jane",
 	},
 	status: "idle",
+	codeStatus: "idle",
+	forgotPasswordCodeStatus: "idle",
+	resetPasswordStatus: "idle",
 	error: null,
 };
 
@@ -66,16 +72,66 @@ const authSlice = createSlice({
 			.addCase(loginAsync.fulfilled, (state, action: PayloadAction<LoginResponse>) => {
 				state.status = "succeeded";
 				state.user = {
-					id: action.payload.user.id,
-					name: action.payload.user.name || action.payload.user.email.split("@")[0],
-					email: action.payload.user.email,
-					avatar: `https://i.pravatar.cc/150?u=${action.payload.user.email}`,
+					id: action.payload.user?.id,
+					name: action.payload.user?.name || action.payload.user?.email?.split("@")[0] || "User",
+					email: action.payload.user?.email || "",
+					avatar: `https://i.pravatar.cc/150?u=${action.payload.user?.email || "default"}`,
 				};
-				// Hardcoded role assignment for demonstration
 				state.role = "ADMIN";
 			})
 			.addCase(loginAsync.rejected, (state, action) => {
 				state.status = "failed";
+				state.error = action.payload as string;
+			})
+			.addCase(sendVerificationCodeAsync.pending, (state) => {
+				state.codeStatus = "loading";
+				state.error = null;
+			})
+			.addCase(sendVerificationCodeAsync.fulfilled, (state) => {
+				state.codeStatus = "succeeded";
+			})
+			.addCase(sendVerificationCodeAsync.rejected, (state, action) => {
+				state.codeStatus = "failed";
+				state.error = action.payload as string;
+			})
+			.addCase(loginWithCodeAsync.pending, (state) => {
+				state.status = "loading";
+				state.error = null;
+			})
+			.addCase(loginWithCodeAsync.fulfilled, (state, action: PayloadAction<LoginResponse>) => {
+				state.status = "succeeded";
+				state.user = {
+					id: action.payload.user?.id,
+					name: action.payload.user?.name || action.payload.user?.email?.split("@")[0] || "User",
+					email: action.payload.user?.email || "",
+					avatar: `https://i.pravatar.cc/150?u=${action.payload.user?.email || "default"}`,
+				};
+				state.role = "ADMIN";
+			})
+			.addCase(loginWithCodeAsync.rejected, (state, action) => {
+				state.status = "failed";
+				state.error = action.payload as string;
+			})
+			.addCase(sendForgotPasswordCodeAsync.pending, (state) => {
+				state.forgotPasswordCodeStatus = "loading";
+				state.error = null;
+			})
+			.addCase(sendForgotPasswordCodeAsync.fulfilled, (state) => {
+				state.forgotPasswordCodeStatus = "succeeded";
+			})
+			.addCase(sendForgotPasswordCodeAsync.rejected, (state, action) => {
+				state.forgotPasswordCodeStatus = "failed";
+				state.error = action.payload as string;
+			})
+			.addCase(resetPasswordAsync.pending, (state) => {
+				state.resetPasswordStatus = "loading";
+				state.error = null;
+			})
+			.addCase(resetPasswordAsync.fulfilled, (state) => {
+				state.resetPasswordStatus = "succeeded";
+			})
+			.addCase(resetPasswordAsync.rejected, (state, action) => {
+				state.resetPasswordStatus = "failed";
 				state.error = action.payload as string;
 			});
 	},
