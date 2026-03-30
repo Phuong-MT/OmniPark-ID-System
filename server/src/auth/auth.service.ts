@@ -2,6 +2,7 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { UserService } from '../user/user.service';
+import { MailService } from '../mail/mail.service';
 import { LoginDto, ResetPasswordDto } from './dto/login.dto';
 import * as bcrypt from 'bcrypt';
 import { UserStatus } from '../user/schema/user.schema';
@@ -12,6 +13,7 @@ export class AuthService {
     private readonly userService: UserService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    private readonly mailService: MailService,
   ) {}
 
   async validateUser(loginDto: LoginDto): Promise<any> {
@@ -57,8 +59,14 @@ export class AuthService {
 
     await this.userService.saveVerificationCode(user._id.toString(), code, expiresAt);
 
-    // Mock sending email
-    console.log(`[Mock Email] Sending verification code ${code} to ${email}`);
+    // Send the real email
+    try {
+      await this.mailService.sendVerificationCode(email, code);
+    } catch (error) {
+      // Clear the code if email fails
+      await this.userService.clearVerificationCode(user._id.toString());
+      throw new Error('Could not send verification email. Please try again.');
+    }
   }
 
   async validateCodeAndLogin(email: string, code: string): Promise<any> {
