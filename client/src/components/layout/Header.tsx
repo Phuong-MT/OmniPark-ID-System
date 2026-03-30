@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "@/redux/store";
-import { setRole, Role } from "@/redux/features/authSlice";
+import { setRole, Role } from "@/redux/features/userSlice";
 import { Bell, Search, Menu } from "lucide-react";
 
 interface HeaderProps {
@@ -12,7 +12,7 @@ interface HeaderProps {
 
 export function Header({ setIsMobileMenuOpen }: HeaderProps) {
 	const dispatch = useDispatch();
-	const { user, role } = useSelector((state: RootState) => state.auth);
+	const { user, role } = useSelector((state: RootState) => state.user);
 
 	const handleRoleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
 		dispatch(setRole(e.target.value as Role));

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "@/redux/store";
-import { setRole, Role } from "@/redux/features/authSlice";
+import { setRole, Role } from "@/redux/features/userSlice";
 import { cn } from "@/utils/cn";
 import {
 	LayoutDashboard,
@@ -52,7 +52,7 @@ export function Sidebar({ isMobileMenuOpen, setIsMobileMenuOpen }: SidebarProps)
 	const [isCollapsed, setIsCollapsed] = React.useState(false);
 	const pathname = usePathname();
 	const dispatch = useDispatch();
-	const role = useSelector((state: RootState) => state.auth.role);
+	const role = useSelector((state: RootState) => state.user.role);
 
 	const links = roleBasedLinks[role] || roleBasedLinks.POC;
 
