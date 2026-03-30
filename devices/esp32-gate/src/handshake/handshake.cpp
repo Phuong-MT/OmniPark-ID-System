@@ -24,11 +24,12 @@ std::string HandshakeManager::buildRequestPayload(const std::string& hostname, c
 }
 
 bool HandshakeManager::handleResponsePayload(const std::string& payload) {
-    StaticJsonDocument<1024> doc;
+    StaticJsonDocument<1536> doc;
     DeviceInfo& deviceInfo = DeviceInfo::getInstance();
     DeserializationError err = deserializeJson(doc, payload);
-
+    
     if (err) {
+        Serial.println("bug_1");
         session_token.clear();
         expires_at = 0;
 
@@ -42,25 +43,15 @@ bool HandshakeManager::handleResponsePayload(const std::string& payload) {
         !doc["tenantCode"] ||
         !doc["status"]) {
 
+        Serial.println("bug_2");
+        session_token.clear();
+        expires_at = 0;
+
+        deviceInfo.setSessionToken("");
+        deviceInfo.setSessionTokenExpiresAt(0);
         deviceInfo.setStatus(DeviceStatus::INACTIVE);
         return false;
     }
-
-    // const char* status = doc["status"];
-    // if (!status || strcmp(status, "SUCCESS") != 0) {
-    //     session_token.clear();
-    //     expires_at = 0;
-
-    //     deviceInfo.setSessionToken("");
-    //     deviceInfo.setSessionTokenExpiresAt(0);
-    //     deviceInfo.setStatus(DeviceStatus::INACTIVE);
-    //     return false;
-    // }
-
-    
-
-    session_token = doc["session_token"].as<const char*>();
-    expires_at = doc["expires_at"].as<uint64_t>();
 
     // ===== Basic device info =====
     deviceInfo.setDeviceId(doc["deviceId"].as<const char*>());
@@ -90,11 +81,16 @@ bool HandshakeManager::handleResponsePayload(const std::string& payload) {
 
 
     // ===== Session =====
-    if (doc["sessionToken"])
+    if (doc["sessionToken"]){
         deviceInfo.setSessionToken(doc["sessionToken"].as<const char*>());
+        session_token = doc["sessionToken"].as<const char*>();
+    }
+    
 
-    if (doc["sessionTokenExpiresAt"])
+    if (doc["sessionTokenExpiresAt"]){
         deviceInfo.setSessionTokenExpiresAt(doc["sessionTokenExpiresAt"].as<uint64_t>());
+        expires_at = doc["sessionTokenExpiresAt"].as<uint64_t>();
+    }
 
 
     // ===== Pairing (optional) =====

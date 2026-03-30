@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  hivemq:
+    image: hivemq/hivemq-ce:latest
+    container_name: hivemq
+    ports:
+      - "1883:1883"
+    networks:
+      - omnipark_net
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: omnipark_backend
+    environment:
+      - MQTT_BROKER_URL=mqtt://hivemq:1883
+      # Add other environment variables from server/.env here if needed
+      # - MONGO_URI_OMNIPARK_ID_SYSTEM=mongodb+srv://...
+      # - JWT_SECRET=...
+      # - JWT_REFRESH_SECRET=...
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./server/.env
+    networks:
+      - omnipark_net
+    depends_on:
+      - hivemq
+    restart: unless-stopped
+
+networks:
+  omnipark_net:
+    driver: bridge

@@ -5,18 +5,26 @@ import { MqttModule } from './mqtt/mqtt.module';
 import { ConfigModule } from '@nestjs/config';
 import { DevicesModule } from './devices/devices.module';
 import { ConnectDBModule } from './utils/connectDB';
+import { UserModule } from './user/user.module';
+import { TenantModule } from './tenant/tenant.module';
+import { AuthModule } from './auth/auth.module';
+import { MailModule } from './mail/mail.module';
 
 @Module({
-  imports: [
-    ConfigModule.forRoot({
-      isGlobal: true,
-      envFilePath: '.env',
-    }),
-    ConnectDBModule,
-    MqttModule,
-    DevicesModule,
-  ],
-  controllers: [AppController],
-  providers: [AppService],
+    imports: [
+        ConfigModule.forRoot({
+            isGlobal: true,
+            envFilePath: '.env',
+        }),
+        ConnectDBModule,
+        MqttModule,
+        DevicesModule,
+        UserModule,
+        TenantModule,
+        AuthModule,
+        MailModule,
+    ],
+    controllers: [AppController],
+    providers: [AppService],
 })
 export class AppModule {}

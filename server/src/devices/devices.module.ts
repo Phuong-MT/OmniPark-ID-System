@@ -7,15 +7,15 @@ import { DevicesController } from './devices.controller';
 import { MqttModule } from 'src/mqtt/mqtt.module';
 
 @Module({
-  imports: [
-    MongooseModule.forFeature(
-      [{ name: Device.name, schema: DeviceSchema }],
-      DBName.omniparkIDSystem,
-    ),
-    forwardRef(() => MqttModule),
-  ],
-  controllers: [DevicesController],
-  providers: [DevicesService],
-  exports: [DevicesService],
+    imports: [
+        MongooseModule.forFeature(
+            [{ name: Device.name, schema: DeviceSchema }],
+            DBName.omniparkIDSystem,
+        ),
+        forwardRef(() => MqttModule),
+    ],
+    controllers: [DevicesController],
+    providers: [DevicesService],
+    exports: [DevicesService],
 })
 export class DevicesModule {}

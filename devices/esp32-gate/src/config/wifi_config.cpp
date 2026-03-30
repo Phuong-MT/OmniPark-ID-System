@@ -72,6 +72,7 @@ NetworkInfo WifiConfig::get() {
     info.ip     = WiFi.localIP();
     info.gateway= WiFi.gatewayIP();
     info.rssi   = WiFi.RSSI();
+    info.subnetMask = WiFi.subnetMask().toString();
 
     return info;
 }

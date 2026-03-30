@@ -16,6 +16,7 @@ struct NetworkInfo {
     String bssid;
     IPAddress ip;
     IPAddress gateway;
+    String subnetMask;
     int rssi;
 };
 
