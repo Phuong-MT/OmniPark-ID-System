@@ -1,6 +1,9 @@
 import { Controller, Logger, Get, UseGuards, Req, NotFoundException } from '@nestjs/common';
 import { UserService } from './user.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { UserRole } from './schema/user.schema';
 import type { Request } from 'express';
 
 @Controller('user')
@@ -8,7 +11,8 @@ export class UserController {
     private logger = new Logger(UserController.name);
     constructor(private readonly userService: UserService) {}
 
-    @UseGuards(JwtAuthGuard)
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(UserRole.USER, UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.POC)
     @Get('me')
     async getProfile(@Req() req: Request) {
         const userId = (req.user as any)?.userId;
