@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Users, Shield, Lock, Search, MoreHorizontal } from "lucide-react";
 import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
+import { TenantManagement } from "./TenantManagement";
 
 const mockUsers = [
 	{
@@ -36,7 +37,7 @@ const mockUsers = [
 ];
 
 export default function AdminPage() {
-	const role = useSelector((state: RootState) => state.auth.role);
+	const role = useSelector((state: RootState) => state.user.role);
 
 	if (role === "POC") {
 		return (
@@ -69,6 +70,8 @@ export default function AdminPage() {
 			</div>
 
 			<div className="grid gap-6">
+				{role === "SUPER_ADMIN" && <TenantManagement />}
+
 				<Card>
 					<CardHeader className="py-4 border-b border-zinc-100 dark:border-zinc-800 flex flex-row items-center justify-between">
 						<div className="space-y-1">
