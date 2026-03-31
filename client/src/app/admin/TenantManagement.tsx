@@ -7,6 +7,7 @@ import apiClient from "@/utils/api/axios";
 
 export function TenantManagement() {
     const [tenants, setTenants] = useState<any[]>([]);
+    const [searchQuery, setSearchQuery] = useState("");
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [formData, setFormData] = useState({
         name: "",
@@ -67,6 +68,10 @@ export function TenantManagement() {
         }
     };
 
+    const filteredTenants = tenants.filter((tenant) =>
+        tenant.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
     return (
         <>
             <Card>
@@ -83,6 +88,8 @@ export function TenantManagement() {
                             <Search className="absolute left-3 top-2.5 h-4 w-4 text-zinc-500" />
                             <input
                                 placeholder="Search tenants..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
                                 className="flex h-9 w-full rounded-md border border-zinc-200 bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-zinc-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-950 dark:border-zinc-800 dark:placeholder:text-zinc-400 dark:focus-visible:ring-zinc-300 pl-9"
                             />
                         </div>
@@ -103,7 +110,7 @@ export function TenantManagement() {
                             </tr>
                         </thead>
                         <tbody className="[&_tr:last-child]:border-0">
-                            {tenants.map((tenant) => (
+                            {filteredTenants.map((tenant) => (
                                 <tr key={tenant._id} className="border-b border-zinc-100 dark:border-zinc-800">
                                     <td className="p-4 align-middle">
                                         <div className="font-medium">{tenant.name}</div>
@@ -124,7 +131,7 @@ export function TenantManagement() {
                                     </td>
                                 </tr>
                             ))}
-                            {tenants.length === 0 && (
+                            {filteredTenants.length === 0 && (
                                 <tr>
                                     <td colSpan={4} className="p-4 text-center text-zinc-500">
                                         No tenants found.
