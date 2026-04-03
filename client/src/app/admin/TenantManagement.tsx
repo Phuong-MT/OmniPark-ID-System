@@ -25,6 +25,7 @@ export function TenantManagement() {
         try {
             const res = await apiClient.get("/tenant");
             setTenants(res.data);
+            console.log(1);
         } catch (error) {
             console.error("Failed to fetch tenants:", error);
         }

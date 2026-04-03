@@ -1,4 +1,4 @@
-import { Controller, Logger, Get, Post, UseGuards, Req, Body, NotFoundException, Inject, forwardRef } from '@nestjs/common';
+import { Controller, Logger, Get, Post, UseGuards, Req, Body, NotFoundException, Inject, forwardRef, Query } from '@nestjs/common';
 import { UserService } from './user.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -61,5 +61,50 @@ export class UserController {
         await this.authService.generateAndSendVerificationCode(inviteUserDto.email);
 
         return { message: 'User invited successfully', userId: user._id };
+    }
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+    @Get()
+    async findAll(
+        @Req() req: Request,
+        @Query('page') page: string = '1',
+        @Query('limit') limit: string = '10',
+        @Query('role') role?: string,
+        @Query('tenantCode') tenantCode?: string,
+    ) {
+        const currentUser = req.user as any;
+        const pageNum = parseInt(page, 10) || 1;
+        const limitNum = parseInt(limit, 10) || 10;
+
+        const result = await this.userService.findAll(
+            pageNum,
+            limitNum,
+            role,
+            tenantCode,
+            currentUser?.role,
+            currentUser?.tenantId
+        );
+
+        // Sanitize the users before returning
+        const safeUsers = result.users.map(user => {
+            const userObj = user.toObject ? user.toObject() : user;
+            const { passwordHash, verificationCode, verificationCodeExpiresAt, ...safeUser } = userObj as any;
+            return {
+                id: safeUser._id,
+                email: safeUser.email,
+                name: safeUser.username, // Using username as name based on schema
+                role: safeUser.role,
+                status: safeUser.status,
+                tenant: safeUser.tenant,
+                createdAt: safeUser.createdAt,
+            };
+        });
+
+        return {
+            users: safeUsers,
+            total: result.total,
+            page: pageNum,
+            limit: limitNum,
+        };
     }
 }

@@ -11,7 +11,7 @@ export class UserService {
     constructor(
         @InjectModel(User.name, DBName.omniparkIDSystem)
         private readonly userModel: Model<UserDocument>,
-    ) {}
+    ) { }
 
     async findByUsername(
         username: string,
@@ -29,7 +29,7 @@ export class UserService {
         if (existingUsername) {
             throw new ConflictException('Username already exists');
         }
-        
+
         const existingEmail = await this.userModel.findOne({ email: dto.email }).exec();
         if (existingEmail) {
             throw new ConflictException('Email already exists');
@@ -74,5 +74,61 @@ export class UserService {
         await this.userModel.findByIdAndUpdate(userId, {
             passwordHash,
         }).exec();
+    }
+
+    async findAll(
+        page: number,
+        limit: number,
+        role?: string,
+        tenantCode?: string,
+        currentUserRole?: string,
+        currentUserTenantId?: string
+    ): Promise<{ users: UserDocument[], total: number }> {
+        const query: any = {};
+
+        if (role) {
+            query.role = role;
+        }
+
+        // Apply tenant filter
+        if (currentUserRole !== 'SUPER_ADMIN') {
+            // Non-super-admins can only see users in their own tenant
+            query.tenantCode = new Types.ObjectId(currentUserTenantId);
+        } else if (tenantCode) {
+            // SUPER_ADMINs can filter by provided tenantCode
+            query.tenantCode = new Types.ObjectId(tenantCode);
+        }
+
+        const skip = (page - 1) * limit;
+
+        const agg = [
+            { $match: query },
+            {
+                $lookup: {
+                    from: 'tenants',
+                    localField: 'tenantCode',
+                    foreignField: '_id',
+                    pipeline: [
+                        { $project: { name: 1, status: 1 } },
+                    ],
+                    as: 'tenant',
+                },
+            },
+            { $unwind: '$tenant' },
+            { $skip: skip },
+            { $limit: limit },
+            {
+                $project: {
+                    tenantCode: 0,
+                },
+            },
+        ];
+
+        const [users, total] = await Promise.all([
+            this.userModel.aggregate(agg),
+            this.userModel.countDocuments(query).exec(),
+        ]);
+
+        return { users, total };
     }
 }
