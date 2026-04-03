@@ -46,7 +46,7 @@ async function run() {
     const tenantId = tenant?._id;
 
     // Check if admin user exists
-    const existingAdmin = await userCollection.findOne({ username: 'minhphuong' });
+    const existingAdmin = await userCollection.findOne({ username: 'admin' });
     if (existingAdmin) {
       console.log('Admin user already exists.');
       return;
@@ -58,8 +58,8 @@ async function run() {
     console.log('Creating super admin user...');
     await userCollection.insertOne({
       tenantCode: new Types.ObjectId(tenantId),
-      username: 'minhphuong',
-      email: 'minhphuongyenky@gmail.com',
+      username: 'admin',
+      email: 'admin@gmail.com',
       passwordHash,
       role: UserRole.SUPER_ADMIN,
       status: UserStatus.ACTIVE,

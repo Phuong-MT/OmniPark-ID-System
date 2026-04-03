@@ -8,7 +8,7 @@ import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
 
 export default function SuperAdminPage() {
-	const role = useSelector((state: RootState) => state.auth.role);
+	const role = useSelector((state: RootState) => state.user.role);
 
 	if (role !== "SUPER_ADMIN") {
 		return (

@@ -2,7 +2,7 @@ import { createAsyncThunk } from "@reduxjs/toolkit";
 import apiClient from "../../utils/api/axios";
 
 export const getUserMeAsync = createAsyncThunk(
-    "auth/getUserMeAsync",
+    "user/getUserMeAsync",
     async (_, { rejectWithValue }) => {
         try {
             const response = await apiClient.get<{ user: any; role: string }>("/user/me");

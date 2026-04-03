@@ -1,8 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, ConflictException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { User, UserDocument } from './schema/user.schema';
 import { DBName } from 'src/utils/connectDB';
+import { InviteUserDto } from './dto/invite-user.dto';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UserService {
@@ -20,6 +22,31 @@ export class UserService {
             query.tenantCode = new Types.ObjectId(tenantCode);
         }
         return this.userModel.findOne(query).exec();
+    }
+
+    async create(dto: InviteUserDto, tenantCode: string): Promise<UserDocument> {
+        const existingUsername = await this.userModel.findOne({ username: dto.username }).exec();
+        if (existingUsername) {
+            throw new ConflictException('Username already exists');
+        }
+        
+        const existingEmail = await this.userModel.findOne({ email: dto.email }).exec();
+        if (existingEmail) {
+            throw new ConflictException('Email already exists');
+        }
+
+        const randomPassword = Math.random().toString(36).slice(-10) + 'A1!'; // Ensuring complex password requirements if any
+        const salt = await bcrypt.genSalt();
+        const passwordHash = await bcrypt.hash(randomPassword, salt);
+
+        const createdUser = new this.userModel({
+            ...dto,
+            tenantCode: new Types.ObjectId(tenantCode),
+            passwordHash,
+            status: 'ACTIVE',
+        });
+
+        return createdUser.save();
     }
 
     async findById(userId: string): Promise<UserDocument | null> {

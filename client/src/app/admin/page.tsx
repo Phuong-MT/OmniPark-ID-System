@@ -8,6 +8,7 @@ import { Users, Shield, Lock, Search, MoreHorizontal } from "lucide-react";
 import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
 import { TenantManagement } from "./TenantManagement";
+import { InviteUserModal } from "./InviteUserModal";
 
 const mockUsers = [
 	{
@@ -38,6 +39,7 @@ const mockUsers = [
 
 export default function AdminPage() {
 	const role = useSelector((state: RootState) => state.user.role);
+	const [isInviteModalOpen, setIsInviteModalOpen] = React.useState(false);
 
 	if (role === "POC") {
 		return (
@@ -63,7 +65,7 @@ export default function AdminPage() {
 						Manage users, roles, and tenant configuration.
 					</p>
 				</div>
-				<Button>
+				<Button onClick={() => setIsInviteModalOpen(true)}>
 					<Users className="mr-2 h-4 w-4" />
 					Invite User
 				</Button>
@@ -185,6 +187,12 @@ export default function AdminPage() {
 					</Card>
 				</div>
 			</div>
+			
+			<InviteUserModal 
+				isOpen={isInviteModalOpen} 
+				onClose={() => setIsInviteModalOpen(false)} 
+				currentUserRole={role} 
+			/>
 		</div>
 	);
 }
