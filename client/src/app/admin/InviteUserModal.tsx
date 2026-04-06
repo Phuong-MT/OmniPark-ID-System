@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import apiClient from "@/utils/api/axios";
+import { useSelector } from "react-redux";
+import { RootState } from "@/redux/store";
 
 interface InviteUserModalProps {
     isOpen: boolean;
@@ -17,18 +19,12 @@ export function InviteUserModal({ isOpen, onClose, currentUserRole }: InviteUser
         role: "USER",
         tenantId: "" // SUPER_ADMIN can pick; standard ADMIN ignores this
     });
-    const [tenants, setTenants] = useState<{_id: string, name: string}[]>([]);
+
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState(false);
 
-    useEffect(() => {
-        if (isOpen && currentUserRole === "SUPER_ADMIN") {
-            apiClient.get("/tenant")
-                .then(res => setTenants(res.data))
-                .catch(err => console.error("Failed to load tenants", err));
-        }
-    }, [isOpen, currentUserRole]);
+    const tenants = useSelector((state: RootState) => state.tenant.tenants);
 
     if (!isOpen) return null;
 
@@ -92,7 +88,7 @@ export function InviteUserModal({ isOpen, onClose, currentUserRole }: InviteUser
                         <X className="w-5 h-5" />
                     </button>
                 </div>
-                
+
                 {success ? (
                     <div className="p-6 flex flex-col items-center text-center space-y-3">
                         <div className="w-12 h-12 rounded-full bg-green-100 text-green-500 flex items-center justify-center dark:bg-green-900/30 dark:text-green-400">
@@ -107,7 +103,7 @@ export function InviteUserModal({ isOpen, onClose, currentUserRole }: InviteUser
                     <form onSubmit={handleSubmit} className="p-6 space-y-4 text-sm">
                         <div className="space-y-1">
                             <label className="font-medium text-zinc-900 dark:text-zinc-100">Username <span className="text-red-500">*</span></label>
-                            <input 
+                            <input
                                 name="username"
                                 type="text"
                                 value={formData.username}
@@ -120,7 +116,7 @@ export function InviteUserModal({ isOpen, onClose, currentUserRole }: InviteUser
 
                         <div className="space-y-1">
                             <label className="font-medium text-zinc-900 dark:text-zinc-100">Email Address <span className="text-red-500">*</span></label>
-                            <input 
+                            <input
                                 name="email"
                                 type="email"
                                 value={formData.email}
@@ -133,7 +129,7 @@ export function InviteUserModal({ isOpen, onClose, currentUserRole }: InviteUser
 
                         <div className="space-y-1">
                             <label className="font-medium text-zinc-900 dark:text-zinc-100">Phone</label>
-                            <input 
+                            <input
                                 name="phone"
                                 type="text"
                                 value={formData.phone}
@@ -146,7 +142,7 @@ export function InviteUserModal({ isOpen, onClose, currentUserRole }: InviteUser
 
                         <div className="space-y-1">
                             <label className="font-medium text-zinc-900 dark:text-zinc-100">Role <span className="text-red-500">*</span></label>
-                            <select 
+                            <select
                                 name="role"
                                 value={formData.role}
                                 onChange={handleChange}
@@ -162,7 +158,7 @@ export function InviteUserModal({ isOpen, onClose, currentUserRole }: InviteUser
                         {currentUserRole === "SUPER_ADMIN" && (
                             <div className="space-y-1">
                                 <label className="font-medium text-zinc-900 dark:text-zinc-100">Assign to Tenant <span className="text-red-500">*</span></label>
-                                <select 
+                                <select
                                     name="tenantId"
                                     value={formData.tenantId}
                                     onChange={handleChange}
@@ -170,7 +166,7 @@ export function InviteUserModal({ isOpen, onClose, currentUserRole }: InviteUser
                                     disabled={isLoading}
                                 >
                                     <option value="" disabled className="dark:bg-zinc-900">Select a tenant</option>
-                                    {tenants.map(t => (
+                                    {tenants?.map(t => (
                                         <option key={t._id} value={t._id} className="dark:bg-zinc-900">{t.name}</option>
                                     ))}
                                 </select>

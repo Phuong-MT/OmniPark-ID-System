@@ -4,9 +4,16 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Building, Plus, Search, X } from "lucide-react";
 import apiClient from "@/utils/api/axios";
+import { useSelector } from "react-redux";
+import { AppDispatch, RootState } from "@/redux/store";
+import { useDispatch } from "react-redux";
+import { getAllTenantsAsync } from "@/redux/features/tenantThunks";
 
 export function TenantManagement() {
-    const [tenants, setTenants] = useState<any[]>([]);
+    const dispatch = useDispatch<AppDispatch>();
+
+    const tenants = useSelector((state: RootState) => state.tenant.tenants);
+
     const [searchQuery, setSearchQuery] = useState("");
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [formData, setFormData] = useState({
@@ -20,20 +27,6 @@ export function TenantManagement() {
     });
     const [loading, setLoading] = useState(false);
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
-
-    const fetchTenants = async () => {
-        try {
-            const res = await apiClient.get("/tenant");
-            setTenants(res.data);
-            console.log(1);
-        } catch (error) {
-            console.error("Failed to fetch tenants:", error);
-        }
-    };
-
-    useEffect(() => {
-        fetchTenants();
-    }, []);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
@@ -51,7 +44,6 @@ export function TenantManagement() {
                 maxUsers: Number(formData.maxUsers),
             });
             setIsModalOpen(false);
-            fetchTenants();
             setFormData({
                 name: "",
                 description: "",
@@ -65,6 +57,7 @@ export function TenantManagement() {
             console.error("Failed to create tenant:", error);
             setErrorMsg(error.response?.data?.message || "Failed to create tenant. Please check the information and try again.");
         } finally {
+            dispatch(getAllTenantsAsync());
             setLoading(false);
         }
     };

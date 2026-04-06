@@ -32,15 +32,6 @@ export default function AdminPage() {
 		return () => clearTimeout(timeoutId);
 	}, [searchTerm, dispatch]);
 
-	// Fetch tenants for super_admin filter dropdown
-	useEffect(() => {
-		if (currentUserRole === "SUPER_ADMIN") {
-			api.get("/tenant")
-				.then(res => setTenants(res.data))
-				.catch(err => console.error("Failed to load tenants", err));
-		}
-	}, [currentUserRole]);
-
 	// Initial fetch
 	useEffect(() => {
 		dispatch(fetchUsersList({ page: 1, limit: 10, ...filters }));
@@ -98,9 +89,9 @@ export default function AdminPage() {
 					<h1 className="text-3xl font-bold tracking-tight">Admin Controls</h1>
 					<p className="text-zinc-500 dark:text-zinc-400">
 						Manage users, roles, and tenant configuration.
-					</p>
+					</p>InviteUserModal
 				</div>
-				<Button onClick={() => setIsInviteModalOpen(true)}>
+				<Button onClick={() => currentUserRole === "SUPER_ADMIN" && setIsInviteModalOpen(true)}>
 					<Users className="mr-2 h-4 w-4" />
 					Invite User
 				</Button>
