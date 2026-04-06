@@ -44,7 +44,7 @@ const mockParks = [
 ];
 
 export default function ParksPage() {
-	const role = useSelector((state: RootState) => state.auth.role);
+	const role = useSelector((state: RootState) => state.user.role);
 
 	// POC only sees simplified subset
 	const displayParks = role === "POC" ? mockParks.slice(0, 2) : mockParks;

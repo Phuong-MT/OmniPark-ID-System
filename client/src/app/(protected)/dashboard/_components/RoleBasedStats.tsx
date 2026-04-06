@@ -7,7 +7,7 @@ import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
 
 export function RoleBasedStats() {
-	const role = useSelector((state: RootState) => state.auth.role);
+	const role = useSelector((state: RootState) => state.user.role);
 
 	return (
 		<>

@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from "react";
+"use client"
+
+import React, { useState } from "react";
 import { X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import apiClient from "@/utils/api/axios";
