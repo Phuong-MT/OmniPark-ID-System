@@ -76,13 +76,18 @@ export class UserService {
         }).exec();
     }
 
+    async updateProfile(userId: string, data: { username?: string }): Promise<UserDocument | null> {
+        return this.userModel.findByIdAndUpdate(userId, { $set: data }, { new: true }).exec();
+    }
+
     async findAll(
         page: number,
         limit: number,
         role?: string,
         tenantCode?: string,
         currentUserRole?: string,
-        currentUserTenantId?: string
+        currentUserTenantId?: string,
+        search?: string
     ): Promise<{ users: UserDocument[], total: number }> {
         const query: any = {};
 
@@ -97,6 +102,13 @@ export class UserService {
         } else if (tenantCode) {
             // SUPER_ADMINs can filter by provided tenantCode
             query.tenantCode = new Types.ObjectId(tenantCode);
+        }
+
+        if (search) {
+            query.$or = [
+                { username: { $regex: search, $options: 'i' } },
+                { email: { $regex: search, $options: 'i' } },
+            ];
         }
 
         const skip = (page - 1) * limit;

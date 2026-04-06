@@ -1,4 +1,4 @@
-import { Controller, Logger, Get, Post, UseGuards, Req, Body, NotFoundException, Inject, forwardRef, Query } from '@nestjs/common';
+import { Controller, Logger, Get, Post, Put, UseGuards, Req, Body, NotFoundException, ConflictException, Inject, forwardRef, Query } from '@nestjs/common';
 import { UserService } from './user.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -44,6 +44,40 @@ export class UserController {
     }
 
     @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(UserRole.USER, UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.POC)
+    @Put('me')
+    async updateProfile(@Req() req: Request, @Body() updateData: { username?: string }) {
+        const userId = (req.user as any)?.userId;
+        if (!userId) {
+            throw new NotFoundException('User not found in token');
+        }
+        
+        if (updateData.username) {
+            const existingUser = await this.userService.findByUsername(updateData.username);
+            if (existingUser && existingUser._id.toString() !== userId) {
+                throw new ConflictException('Username already taken');
+            }
+        }
+
+        const user = await this.userService.updateProfile(userId, updateData);
+        if (!user) {
+            throw new NotFoundException('User not found');
+        }
+
+        const userObj = user.toObject ? user.toObject() : user;
+        const { passwordHash, verificationCode, verificationCodeExpiresAt, ...safeUser } = userObj as any;
+
+        return {
+            message: 'Profile updated successfully',
+            user: {
+                id: safeUser._id,
+                email: safeUser.email,
+                name: safeUser.username,
+            }
+        };
+    }
+
+    @UseGuards(JwtAuthGuard, RolesGuard)
     @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
     @Post('invite')
     async inviteUser(@Req() req: Request, @Body() inviteUserDto: InviteUserDto) {
@@ -71,6 +105,7 @@ export class UserController {
         @Query('limit') limit: string = '10',
         @Query('role') role?: string,
         @Query('tenantCode') tenantCode?: string,
+        @Query('search') search?: string,
     ) {
         const currentUser = req.user as any;
         const pageNum = parseInt(page, 10) || 1;
@@ -82,7 +117,8 @@ export class UserController {
             role,
             tenantCode,
             currentUser?.role,
-            currentUser?.tenantId
+            currentUser?.tenantId,
+            search
         );
 
         // Sanitize the users before returning

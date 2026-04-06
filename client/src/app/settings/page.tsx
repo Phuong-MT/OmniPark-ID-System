@@ -8,7 +8,7 @@ import { RootState } from "@/redux/store";
 import { User, Bell, Palette, Globe, Key } from "lucide-react";
 
 export default function SettingsPage() {
-	const { user, role } = useSelector((state: RootState) => state.auth);
+	const { user, role } = useSelector((state: RootState) => state.user);
 
 	return (
 		<div className="flex flex-col gap-6 max-w-4xl mx-auto w-full">

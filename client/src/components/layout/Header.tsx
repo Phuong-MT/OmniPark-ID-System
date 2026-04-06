@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "@/redux/store";
 import { setRole, Role } from "@/redux/features/userSlice";
@@ -59,7 +60,7 @@ export function Header({ setIsMobileMenuOpen }: HeaderProps) {
 					<span className="absolute top-2 right-2 flex h-2 w-2 rounded-full bg-red-500 ring-2 ring-white dark:ring-zinc-950" />
 				</button>
 
-				<div className="flex items-center gap-2 sm:gap-3 sm:border-l sm:border-zinc-200 sm:pl-4 dark:border-zinc-800">
+				<Link href="/settings" className="flex items-center gap-2 sm:gap-3 sm:border-l sm:border-zinc-200 sm:pl-4 dark:border-zinc-800 hover:opacity-80 transition-opacity cursor-pointer">
 					<div className="hidden flex-col items-end md:flex">
 						<span className="text-sm font-medium leading-none whitespace-nowrap">
 							{user?.name}
@@ -79,7 +80,7 @@ export function Header({ setIsMobileMenuOpen }: HeaderProps) {
 							className="h-full w-full object-cover"
 						/>
 					</div>
-				</div>
+				</Link>
 			</div>
 		</header>
 	);

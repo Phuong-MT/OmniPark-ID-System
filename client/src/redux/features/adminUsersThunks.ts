@@ -6,13 +6,14 @@ interface FetchUsersParams {
     limit: number;
     role?: string;
     tenantCode?: string;
+    search?: string;
 }
 
 export const fetchUsersList = createAsyncThunk(
     "adminUsers/fetchUsersList",
     async (params: FetchUsersParams, { rejectWithValue }) => {
         try {
-            const { page, limit, role, tenantCode } = params;
+            const { page, limit, role, tenantCode, search } = params;
             // Build query params
             const queryParams = new URLSearchParams({
                 page: page.toString(),
@@ -20,6 +21,7 @@ export const fetchUsersList = createAsyncThunk(
             });
             if (role) queryParams.append("role", role);
             if (tenantCode) queryParams.append("tenantCode", tenantCode);
+            if (search) queryParams.append("search", search);
 
             const response = await api.get(`/user?${queryParams.toString()}`);
             return response.data; // { users: [], total: number, page: number, limit: number }

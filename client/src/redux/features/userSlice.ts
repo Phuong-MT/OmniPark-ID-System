@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { getUserMeAsync } from "./userThunks";
+import { getUserMeAsync, updateUserProfileAsync } from "./userThunks";
 
 export type Role = "POC" | "ADMIN" | "SUPER_ADMIN";
 
@@ -56,6 +56,12 @@ const userSlice = createSlice({
                 state.status = "failed";
                 state.error = action.payload as string;
                 state.user = null;
+            })
+            .addCase(updateUserProfileAsync.fulfilled, (state, action) => {
+                if (state.user) {
+                    state.user.name = action.payload.user?.name || action.payload.user?.email?.split("@")[0] || "User";
+                    state.user.email = action.payload.user?.email || state.user.email;
+                }
             });
     },
 });

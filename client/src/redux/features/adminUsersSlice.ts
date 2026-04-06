@@ -21,6 +21,7 @@ interface AdminUsersState {
     filters: {
         role?: string;
         tenantCode?: string;
+        search?: string;
     };
 }
 
@@ -38,7 +39,7 @@ const adminUsersSlice = createSlice({
     name: "adminUsers",
     initialState,
     reducers: {
-        setFilters(state, action: PayloadAction<{ role?: string; tenantCode?: string }>) {
+        setFilters(state, action: PayloadAction<{ role?: string; tenantCode?: string; search?: string }>) {
             state.filters = { ...state.filters, ...action.payload };
             // Reset pagination and list when filters change
             state.users = [];

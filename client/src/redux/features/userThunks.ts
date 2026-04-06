@@ -13,3 +13,16 @@ export const getUserMeAsync = createAsyncThunk(
         }
     },
 );
+
+export const updateUserProfileAsync = createAsyncThunk(
+    "user/updateUserProfileAsync",
+    async (updateData: { username?: string }, { rejectWithValue }) => {
+        try {
+            const response = await apiClient.put<{ message: string; user: any }>("/user/me", updateData);
+            return response.data;
+        } catch (err: any) {
+            const errorMessage = err.response?.data?.message || err.message || "Failed to update profile";
+            return rejectWithValue(errorMessage);
+        }
+    },
+);
