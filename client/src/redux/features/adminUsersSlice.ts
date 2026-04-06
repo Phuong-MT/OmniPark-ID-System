@@ -40,7 +40,17 @@ const adminUsersSlice = createSlice({
     initialState,
     reducers: {
         setFilters(state, action: PayloadAction<{ role?: string; tenantCode?: string; search?: string }>) {
-            state.filters = { ...state.filters, ...action.payload };
+            const newFilters = { ...state.filters, ...action.payload };
+            
+            // Prevent update if filters are logically identical
+            const isSame = 
+                (state.filters.role || "") === (newFilters.role || "") && 
+                (state.filters.tenantCode || "") === (newFilters.tenantCode || "") &&
+                (state.filters.search || "") === (newFilters.search || "");
+                
+            if (isSame) return;
+
+            state.filters = newFilters;
             // Reset pagination and list when filters change
             state.users = [];
             state.page = 1;

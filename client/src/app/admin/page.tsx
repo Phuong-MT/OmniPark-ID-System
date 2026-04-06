@@ -12,7 +12,6 @@ import { TenantManagement } from "./TenantManagement";
 import { InviteUserModal } from "./InviteUserModal";
 import { fetchUsersList } from "@/redux/features/adminUsersThunks";
 import { setFilters } from "@/redux/features/adminUsersSlice";
-import api from "@/utils/api/axios";
 
 export default function AdminPage() {
 	const dispatch = useDispatch<AppDispatch>();
@@ -34,15 +33,17 @@ export default function AdminPage() {
 
 	// Initial fetch
 	useEffect(() => {
-		dispatch(fetchUsersList({ page: 1, limit: 10, ...filters }));
+		const promise = dispatch(fetchUsersList({ page: 1, limit: 10, ...filters }));
+		return () => promise.abort();
 	}, [dispatch, filters]);
 
 	// Intersection Observer for Infinite Scroll
 	useEffect(() => {
+		let promise: any = null;
 		const observer = new IntersectionObserver((entries) => {
 			const target = entries[0];
-			if (target.isIntersecting && hasMore && !loading) {
-				dispatch(fetchUsersList({ page: page + 1, limit: 10, ...filters }));
+			if (target.isIntersecting && hasMore && !loading && users.length > 0) {
+				promise = dispatch(fetchUsersList({ page: page + 1, limit: 10, ...filters }));
 			}
 		}, {
 			root: null,
@@ -56,8 +57,9 @@ export default function AdminPage() {
 
 		return () => {
 			if (loaderRef.current) observer.unobserve(loaderRef.current);
+			if (promise) promise.abort();
 		};
-	}, [hasMore, loading, page, filters, dispatch]);
+	}, [hasMore, loading, page, filters, users.length, dispatch]);
 
 	const handleRoleFilter = (e: React.ChangeEvent<HTMLSelectElement>) => {
 		dispatch(setFilters({ role: e.target.value || undefined }));

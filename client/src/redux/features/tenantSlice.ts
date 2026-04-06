@@ -1,17 +1,7 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { getAllTenantsAsync } from "./tenantThunks";
+import { Tenant } from "@/types/tenants";
 
-interface Tenant {
-    _id: string
-    name: string,
-    status: string,
-    description?: string;
-    address?: string,
-    contactEmail?: string,
-    contactPhone?: string,
-    maxDevices?: number,
-    maxUsers?: number,
-};
 
 interface TenantState {
     tenants: Tenant[];

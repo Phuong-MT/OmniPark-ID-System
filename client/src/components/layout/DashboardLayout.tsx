@@ -36,7 +36,9 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 			<div className="flex h-screen w-full items-center justify-center bg-zinc-50 dark:bg-zinc-900 text-zinc-950 dark:text-zinc-50">
 				<div className="flex flex-col items-center">
 					<div className="h-10 w-10 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"></div>
-					<p className="mt-4 text-sm font-medium text-zinc-500 dark:text-zinc-400">Loading profile...</p>
+					<p className="mt-4 text-sm font-medium text-zinc-500 dark:text-zinc-400">
+						Loading profile...
+					</p>
 				</div>
 			</div>
 		);
