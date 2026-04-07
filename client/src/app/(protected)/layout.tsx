@@ -2,14 +2,18 @@ import { redirect } from "next/navigation";
 import { axiosServer } from "@/utils/api/axiosServer";
 import { DashboardLayoutClient } from "@/components/layout/DashboardLayoutClient";
 import { RootState } from "@/redux/store";
+import { ReduxHydrator } from "@/redux/provider";
+import { Role } from "@/redux/features/userSlice";
 
-export default async function ProtectedLayout({
-	children,
-}: {
-	children: React.ReactNode;
-}) {
+export default async function ProtectedLayout({ children }: { children: React.ReactNode }) {
 	try {
-		const res = await axiosServer.get<{ user: any; role: string }>("/user/me");
+		const [res, tenants] = await Promise.all([
+			axiosServer.get<{ user: any; role: string }>("/user/me"),
+			axiosServer
+				.get("/tenant")
+				.then((res) => res.data)
+				.catch(() => []),
+		]);
 		const { user, role } = res.data;
 
 		// Build the initial state for the Redux store
@@ -25,12 +29,16 @@ export default async function ProtectedLayout({
 				status: "succeeded",
 				error: null,
 			},
+			tenant: { tenants, myTenant: null, status: "idle", error: "" },
 		};
 
 		return (
-			<DashboardLayoutClient initialState={initialState}>
-				{children}
-			</DashboardLayoutClient>
+			<>
+				<ReduxHydrator initialState={initialState} />
+				<DashboardLayoutClient currentUserRole={role as Role}>
+					{children}
+				</DashboardLayoutClient>
+			</>
 		);
 	} catch (error) {
 		// If unauthorized or any error occurs, redirect to login

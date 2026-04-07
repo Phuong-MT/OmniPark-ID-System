@@ -38,7 +38,7 @@ axiosServer.interceptors.request.use(
 	},
 	(error) => {
 		return Promise.reject(error);
-	}
+	},
 );
 
 // Response interceptor
@@ -53,9 +53,9 @@ axiosServer.interceptors.response.use(
 		if (
 			error.response?.status === 401 &&
 			!originalRequest._retry &&
-			originalRequest.url !== '/auth/refresh' &&
-			originalRequest.url !== '/auth/login' &&
-			originalRequest.url !== '/auth/login-with-code'
+			originalRequest.url !== "/auth/refresh" &&
+			originalRequest.url !== "/auth/login" &&
+			originalRequest.url !== "/auth/login-with-code"
 		) {
 			originalRequest._retry = true;
 			try {
@@ -71,18 +71,23 @@ axiosServer.interceptors.response.use(
 					{
 						headers: { Cookie: cookieString },
 						withCredentials: true,
-					}
+					},
 				);
 
 				const setCookieHeader = refreshRes.headers["set-cookie"];
 				if (setCookieHeader) {
 					let newCookieStr = cookieString;
-					setCookieHeader.forEach(sc => {
-						const [nameValue] = sc.split(';');
-						const [name, ...valParts] = nameValue.split('=');
-						const value = valParts.join('=');
-						newCookieStr = newCookieStr.split('; ').filter(c => !c.trim().startsWith(`${name.trim()}=`)).join('; ');
-						newCookieStr = newCookieStr ? `${newCookieStr}; ${name.trim()}=${value}` : `${name.trim()}=${value}`;
+					setCookieHeader.forEach((sc) => {
+						const [nameValue] = sc.split(";");
+						const [name, ...valParts] = nameValue.split("=");
+						const value = valParts.join("=");
+						newCookieStr = newCookieStr
+							.split("; ")
+							.filter((c) => !c.trim().startsWith(`${name.trim()}=`))
+							.join("; ");
+						newCookieStr = newCookieStr
+							? `${newCookieStr}; ${name.trim()}=${value}`
+							: `${name.trim()}=${value}`;
 					});
 					originalRequest.headers.Cookie = newCookieStr;
 				}
@@ -96,5 +101,5 @@ axiosServer.interceptors.response.use(
 		}
 
 		return Promise.reject(error);
-	}
+	},
 );

@@ -1,9 +1,13 @@
-import { Controller, Logger } from '@nestjs/common';
+import { Controller, Logger, Get, Req, Query, UseGuards } from '@nestjs/common';
 import { DevicesService } from './devices.service';
 import { MqttSubscribe } from '../mqtt/ mqtt.decorator';
 import { MqttService } from 'src/mqtt/mqtt.service';
 import { MQTT_TOPICS } from 'src/mqtt/topics';
 import type { HandshakeRequest } from './schema/devices.dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { UserRole } from '../user/schema/user.schema';
 
 @Controller('devices')
 export class DevicesController {
@@ -13,6 +17,33 @@ export class DevicesController {
         private readonly devicesService: DevicesService,
         private readonly mqttService: MqttService,
     ) {}
+
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+    @Get()
+    async findAll(
+        @Req() req,
+        @Query('page') page: string = '1',
+        @Query('limit') limit: string = '10',
+        @Query('type') type?: string,
+        @Query('tenantCode') tenantCode?: string,
+        @Query('search') search?: string,
+    ) {
+        const user = req.user;
+        const isAdmin = user.role === UserRole.ADMIN;
+        // If ADMIN, only find devices for their tenant. For SUPER_ADMIN, it takes query param.
+        const targetTenantCode = isAdmin ? user.tenantCode : tenantCode;
+        
+        const pageNum = parseInt(page, 10) || 1;
+        const limitNum = parseInt(limit, 10) || 10;
+        
+        return this.devicesService.findDevices(
+            { tenantCode: targetTenantCode, type, search },
+            pageNum,
+            limitNum
+        );
+    }
+
     @MqttSubscribe(MQTT_TOPICS.HANDSHAKE_INIT)
     async handleHandshakeInit(message: HandshakeRequest) {
         const {

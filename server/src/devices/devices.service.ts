@@ -49,21 +49,50 @@ export class DevicesService {
     // =========================
     // FIND ALL (FILTER)
     // =========================
-    async findDevices(query: {
-        tenantCode: string;
-        type?: string;
-        status?: DeviceStatus;
-        isOnline?: boolean;
-    }) {
-        const filter: any = {
-            tenantCode: query.tenantCode,
-        };
+    async findDevices(
+        query: {
+            tenantCode?: string;
+            type?: string;
+            status?: DeviceStatus;
+            isOnline?: boolean;
+            search?: string;
+        },
+        page: number = 1,
+        limit: number = 10,
+    ) {
+        const filter: any = {};
+        if (query.tenantCode) {
+            filter.tenantCode = query.tenantCode;
+        }
 
         if (query.type) filter.type = query.type;
         if (query.status) filter.status = query.status;
-        // if (query.isOnline !== undefined) filter.isOnline = query.isOnline;
+        
+        if (query.search) {
+            filter.$or = [
+                { deviceName: { $regex: query.search, $options: 'i' } },
+                { macAddress: { $regex: query.search, $options: 'i' } },
+            ];
+        }
 
-        return this.deviceModel.find(filter).sort({ createdAt: -1 }).lean();
+        const skip = (page - 1) * limit;
+
+        const [data, total] = await Promise.all([
+            this.deviceModel
+                .find(filter)
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit)
+                .lean(),
+            this.deviceModel.countDocuments(filter),
+        ]);
+
+        return {
+            data,
+            total,
+            page,
+            limit,
+        };
     }
 
     // =========================

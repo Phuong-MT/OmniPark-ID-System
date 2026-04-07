@@ -1,5 +1,5 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
-import apiClient from "../../utils/api/axios";
+import apiClient from "@/utils/api/axios";
 
 export const getUserMeAsync = createAsyncThunk(
     "user/getUserMeAsync",

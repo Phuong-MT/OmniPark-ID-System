@@ -8,16 +8,12 @@ import { setRole, Role } from "@/redux/features/userSlice";
 import { Bell, Search, Menu } from "lucide-react";
 
 interface HeaderProps {
+	role: Role;
 	setIsMobileMenuOpen: (val: boolean) => void;
 }
 
-export function Header({ setIsMobileMenuOpen }: HeaderProps) {
-	const dispatch = useDispatch();
-	const { user, role } = useSelector((state: RootState) => state.user);
-
-	const handleRoleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-		dispatch(setRole(e.target.value as Role));
-	};
+export function Header({role, setIsMobileMenuOpen }: HeaderProps) {
+	const { user } = useSelector((state: RootState) => state.user);
 
 	return (
 		<header className="sticky top-0 z-30 flex h-14 w-full items-center justify-between border-b border-zinc-200 bg-white/80 px-4 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/80">
@@ -39,22 +35,6 @@ export function Header({ setIsMobileMenuOpen }: HeaderProps) {
 			</div>
 
 			<div className="flex items-center gap-3 sm:gap-4">
-				{/* DEV ONLY Role Switcher (Desktop) */}
-				<div className="hidden md:flex items-center gap-2 bg-yellow-50 dark:bg-yellow-900/20 p-1 px-3 rounded-md border border-yellow-200 dark:border-yellow-900">
-					<span className="text-xs font-medium text-yellow-800 dark:text-yellow-500 whitespace-nowrap">
-						Dev Role Simulate:
-					</span>
-					<select
-						value={role}
-						onChange={handleRoleChange}
-						className="text-xs bg-transparent border-none outline-none text-yellow-900 dark:text-yellow-400 font-semibold cursor-pointer"
-					>
-						<option value="POC">POC</option>
-						<option value="ADMIN">ADMIN</option>
-						<option value="SUPER_ADMIN">SUPER_ADMIN</option>
-					</select>
-				</div>
-
 				<button className="relative flex h-9 w-9 items-center justify-center rounded-full text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-50 shrink-0">
 					<Bell size={20} />
 					<span className="absolute top-2 right-2 flex h-2 w-2 rounded-full bg-red-500 ring-2 ring-white dark:ring-zinc-950" />

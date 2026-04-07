@@ -25,7 +25,7 @@ export function ReduxProvider({ children, initialState }: { children: React.Reac
 
 import { useStore } from "react-redux";
 
-export function ReduxHydrator({ initialState }: { initialState: Partial<RootState> }) {
+export function ReduxHydrator({ initialState }: { initialState?: Partial<RootState> }) {
     const store = useStore();
 
     useEffect(() => {

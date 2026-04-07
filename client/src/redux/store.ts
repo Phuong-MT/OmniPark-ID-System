@@ -3,6 +3,7 @@ import authReducer from "./features/authSlice";
 import userReducer from "./features/userSlice";
 import adminUsersReducer from "./features/adminUsersSlice";
 import tenantReducer from "./features/tenantSlice";
+import adminDevicesReducer from "./features/adminDevicesSlice";
 import { combineReducers } from "@reduxjs/toolkit";
 
 import { AnyAction } from "@reduxjs/toolkit";
@@ -17,6 +18,7 @@ const combinedReducer = combineReducers({
 	tenant: tenantReducer,
 	user: userReducer,
 	adminUsers: adminUsersReducer,
+	adminDevices: adminDevicesReducer,
 });
 
 export const rootReducer = (

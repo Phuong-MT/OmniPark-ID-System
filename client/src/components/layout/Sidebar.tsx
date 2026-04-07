@@ -3,8 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useSelector, useDispatch } from "react-redux";
-import { RootState } from "@/redux/store";
+import { useDispatch } from "react-redux";
 import { setRole, Role } from "@/redux/features/userSlice";
 import { cn } from "@/utils/cn";
 import {
@@ -44,15 +43,15 @@ const roleBasedLinks = {
 };
 
 interface SidebarProps {
+	role: Role;
 	isMobileMenuOpen: boolean;
 	setIsMobileMenuOpen: (val: boolean) => void;
 }
 
-export function Sidebar({ isMobileMenuOpen, setIsMobileMenuOpen }: SidebarProps) {
+export function Sidebar({ role, isMobileMenuOpen, setIsMobileMenuOpen }: SidebarProps) {
 	const [isCollapsed, setIsCollapsed] = React.useState(false);
 	const pathname = usePathname();
 	const dispatch = useDispatch();
-	const role = useSelector((state: RootState) => state.user.role);
 
 	const links = roleBasedLinks[role] || roleBasedLinks.POC;
 
@@ -60,10 +59,6 @@ export function Sidebar({ isMobileMenuOpen, setIsMobileMenuOpen }: SidebarProps)
 	React.useEffect(() => {
 		setIsMobileMenuOpen(false);
 	}, [pathname, setIsMobileMenuOpen]);
-
-	const handleRoleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-		dispatch(setRole(e.target.value as Role));
-	};
 
 	return (
 		<>
@@ -143,24 +138,6 @@ export function Sidebar({ isMobileMenuOpen, setIsMobileMenuOpen }: SidebarProps)
 							</Link>
 						);
 					})}
-				</div>
-
-				{/* Mobile ONLY Role Switcher (matches the one in header) */}
-				<div className="p-4 border-t border-zinc-200 dark:border-zinc-800 md:hidden">
-					<div className="flex flex-col gap-2 bg-yellow-50 dark:bg-yellow-900/20 p-2 rounded-md border border-yellow-200 dark:border-yellow-900">
-						<span className="text-xs font-medium text-yellow-800 dark:text-yellow-500">
-							Dev Role:
-						</span>
-						<select
-							value={role}
-							onChange={handleRoleChange}
-							className="text-xs bg-transparent border-none outline-none text-yellow-900 dark:text-yellow-400 font-semibold cursor-pointer w-full p-1"
-						>
-							<option value="POC">POC</option>
-							<option value="ADMIN">ADMIN</option>
-							<option value="SUPER_ADMIN">SUPER_ADMIN</option>
-						</select>
-					</div>
 				</div>
 			</div>
 		</>

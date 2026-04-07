@@ -20,7 +20,7 @@ import { MailModule } from './mail/mail.module';
         }),
         ThrottlerModule.forRoot([{
             ttl: 60000,
-            limit: 20,
+            limit: 100,
         }]),
         ConnectDBModule,
         MqttModule,
