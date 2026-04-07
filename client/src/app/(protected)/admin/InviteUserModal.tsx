@@ -4,8 +4,9 @@ import React, { useState } from "react";
 import { X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import apiClient from "@/utils/api/axios";
-import { useSelector } from "react-redux";
-import { RootState } from "@/redux/store";
+import { useDispatch, useSelector } from "react-redux";
+import { AppDispatch, RootState } from "@/redux/store";
+import { fetchUsersList } from "@/redux/features/adminUsersThunks";
 
 interface InviteUserModalProps {
 	isOpen: boolean;
@@ -25,17 +26,20 @@ export function InviteUserModal({ isOpen, onClose, currentUserRole }: InviteUser
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [success, setSuccess] = useState(false);
-
+	const dispatch = useDispatch<AppDispatch>();
 	const tenants = useSelector((state: RootState) => state.tenant.tenants);
+	const {filters } = useSelector(
+		(state: RootState) => state.adminUsers,
+	);
 
 	if (!isOpen) return null;
 
 	// Determine assignable roles based on current user's role
 	const getAssignableRoles = () => {
 		if (currentUserRole === "SUPER_ADMIN") {
-			return ["ADMIN", "POC", "USER"];
+			return ["ADMIN", "POC"];
 		}
-		return ["POC", "USER"];
+		return ["POC"];
 	};
 
 	const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -65,6 +69,7 @@ export function InviteUserModal({ isOpen, onClose, currentUserRole }: InviteUser
 				setSuccess(false);
 				onClose();
 			}, 2000);
+			dispatch(fetchUsersList({ page: 1, limit: 10, ...filters }));
 		} catch (err: any) {
 			if (err.response?.data?.message) {
 				const apiMsg = err.response.data.message;

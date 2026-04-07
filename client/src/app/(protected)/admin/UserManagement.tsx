@@ -16,10 +16,7 @@ export function UserManagement({ currentUserRole }: { currentUserRole: string })
 	const { users, hasMore, loading, page, filters } = useSelector(
 		(state: RootState) => state.adminUsers,
 	);
-
-	const [tenants, setTenants] = React.useState<
-		{ _id: string; name: string; tenantCode: string }[]
-	>([]);
+	const tenants = useSelector((state: RootState)=> state.tenant.tenants);
 	const [searchTerm, setSearchTerm] = React.useState("");
 	const loaderRef = useRef<HTMLDivElement>(null);
 
@@ -88,7 +85,6 @@ export function UserManagement({ currentUserRole }: { currentUserRole: string })
 						<option value="">All Roles</option>
 						<option value="SUPER_ADMIN">Super Admin</option>
 						<option value="ADMIN">Admin</option>
-						<option value="USER">User</option>
 						<option value="POC">POC</option>
 					</select>
 
