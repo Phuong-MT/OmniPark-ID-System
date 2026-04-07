@@ -6,7 +6,13 @@ import { Header } from "./Header";
 import { ReduxHydrator } from "@/redux/provider";
 import { RootState } from "@/redux/store";
 
-export function DashboardLayoutClient({ children, initialState }: { children: React.ReactNode, initialState: Partial<RootState> }) {
+export function DashboardLayoutClient({
+	children,
+	initialState,
+}: {
+	children: React.ReactNode;
+	initialState: Partial<RootState>;
+}) {
 	const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
 
 	return (

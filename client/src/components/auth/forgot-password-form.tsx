@@ -18,7 +18,9 @@ export function ForgotPasswordForm({ onBackToLogin }: ForgotPasswordFormProps) {
 	const [validationError, setValidationError] = useState("");
 
 	const dispatch = useDispatch<AppDispatch>();
-	const { forgotPasswordCodeStatus, resetPasswordStatus, error } = useSelector((state: RootState) => state.auth);
+	const { forgotPasswordCodeStatus, resetPasswordStatus, error } = useSelector(
+		(state: RootState) => state.auth,
+	);
 
 	const handleSendCode = async () => {
 		setValidationError("");
@@ -55,7 +57,9 @@ export function ForgotPasswordForm({ onBackToLogin }: ForgotPasswordFormProps) {
 		<form className="space-y-6" onSubmit={handleSubmit}>
 			<div className="space-y-4">
 				<div className="space-y-2">
-					<Label htmlFor="reset-email" className="dark:text-gray-300">Email for Reset</Label>
+					<Label htmlFor="reset-email" className="dark:text-gray-300">
+						Email for Reset
+					</Label>
 					<div className="flex space-x-2">
 						<Input
 							id="reset-email"
@@ -63,26 +67,37 @@ export function ForgotPasswordForm({ onBackToLogin }: ForgotPasswordFormProps) {
 							placeholder="name@example.com"
 							value={email}
 							onChange={(e) => setEmail(e.target.value)}
-							disabled={resetPasswordStatus === "loading" || forgotPasswordCodeStatus === "loading"}
+							disabled={
+								resetPasswordStatus === "loading" ||
+								forgotPasswordCodeStatus === "loading"
+							}
 							required
 							className="flex-1 dark:bg-zinc-800 dark:border-zinc-700 dark:text-white dark:placeholder-gray-500"
 						/>
 						<button
 							type="button"
 							onClick={handleSendCode}
-							disabled={forgotPasswordCodeStatus === "loading" || resetPasswordStatus === "loading" || !email}
+							disabled={
+								forgotPasswordCodeStatus === "loading" ||
+								resetPasswordStatus === "loading" ||
+								!email
+							}
 							className="px-3 py-2 border border-gray-300 dark:border-zinc-700 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 transition-colors"
 						>
 							{forgotPasswordCodeStatus === "loading" ? "Sending..." : "Send Code"}
 						</button>
 					</div>
 					{forgotPasswordCodeStatus === "succeeded" && (
-						<p className="text-xs text-green-600 dark:text-green-400 mt-1">Verification code sent!</p>
+						<p className="text-xs text-green-600 dark:text-green-400 mt-1">
+							Verification code sent!
+						</p>
 					)}
 				</div>
 
 				<div className="space-y-2">
-					<Label htmlFor="reset-code" className="dark:text-gray-300">Verification Code</Label>
+					<Label htmlFor="reset-code" className="dark:text-gray-300">
+						Verification Code
+					</Label>
 					<Input
 						id="reset-code"
 						type="text"
@@ -97,7 +112,9 @@ export function ForgotPasswordForm({ onBackToLogin }: ForgotPasswordFormProps) {
 				</div>
 
 				<div className="space-y-2">
-					<Label htmlFor="new-password" className="dark:text-gray-300">New Password</Label>
+					<Label htmlFor="new-password" className="dark:text-gray-300">
+						New Password
+					</Label>
 					<Input
 						id="new-password"
 						type="password"

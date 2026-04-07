@@ -13,9 +13,13 @@ import { setFilters } from "@/redux/features/adminUsersSlice";
 
 export function UserManagement({ currentUserRole }: { currentUserRole: string }) {
 	const dispatch = useDispatch<AppDispatch>();
-	const { users, hasMore, loading, page, filters } = useSelector((state: RootState) => state.adminUsers);
+	const { users, hasMore, loading, page, filters } = useSelector(
+		(state: RootState) => state.adminUsers,
+	);
 
-	const [tenants, setTenants] = React.useState<{ _id: string, name: string, tenantCode: string }[]>([]);
+	const [tenants, setTenants] = React.useState<
+		{ _id: string; name: string; tenantCode: string }[]
+	>([]);
 	const [searchTerm, setSearchTerm] = React.useState("");
 	const loaderRef = useRef<HTMLDivElement>(null);
 
@@ -36,16 +40,19 @@ export function UserManagement({ currentUserRole }: { currentUserRole: string })
 	// Intersection Observer for Infinite Scroll
 	useEffect(() => {
 		let promise: any = null;
-		const observer = new IntersectionObserver((entries) => {
-			const target = entries[0];
-			if (target.isIntersecting && hasMore && !loading && users.length > 0) {
-				promise = dispatch(fetchUsersList({ page: page + 1, limit: 10, ...filters }));
-			}
-		}, {
-			root: null,
-			rootMargin: "20px",
-			threshold: 1.0
-		});
+		const observer = new IntersectionObserver(
+			(entries) => {
+				const target = entries[0];
+				if (target.isIntersecting && hasMore && !loading && users.length > 0) {
+					promise = dispatch(fetchUsersList({ page: page + 1, limit: 10, ...filters }));
+				}
+			},
+			{
+				root: null,
+				rootMargin: "20px",
+				threshold: 1.0,
+			},
+		);
 
 		if (loaderRef.current) {
 			observer.observe(loaderRef.current);
@@ -92,8 +99,10 @@ export function UserManagement({ currentUserRole }: { currentUserRole: string })
 							defaultValue=""
 						>
 							<option value="">All Tenants</option>
-							{tenants.map(t => (
-								<option key={t._id} value={t._id}>{t.name}</option>
+							{tenants.map((t) => (
+								<option key={t._id} value={t._id}>
+									{t.name}
+								</option>
 							))}
 						</select>
 					)}
@@ -140,17 +149,19 @@ export function UserManagement({ currentUserRole }: { currentUserRole: string })
 								>
 									<td className="p-4 align-middle">
 										<div className="font-medium">{user.name || "N/A"}</div>
-										<div className="text-xs text-zinc-500">
-											{user.email}
-										</div>
+										<div className="text-xs text-zinc-500">{user.email}</div>
 									</td>
 									<td className="p-4 align-middle">
-										<div className="font-medium">{user.tenant?.name || "N/A"}</div>
+										<div className="font-medium">
+											{user.tenant?.name || "N/A"}
+										</div>
 									</td>
 									<td className="p-4 align-middle">
 										<Badge
 											variant={
-												user.role === "ADMIN" || user.role === "SUPER_ADMIN" ? "default" : "secondary"
+												user.role === "ADMIN" || user.role === "SUPER_ADMIN"
+													? "default"
+													: "secondary"
 											}
 										>
 											{user.role}
@@ -165,7 +176,9 @@ export function UserManagement({ currentUserRole }: { currentUserRole: string })
 										</div>
 									</td>
 									<td className="p-4 align-middle text-zinc-500">
-										{user.createdAt ? new Date(user.createdAt).toLocaleDateString() : "N/A"}
+										{user.createdAt
+											? new Date(user.createdAt).toLocaleDateString()
+											: "N/A"}
 									</td>
 									<td className="p-4 align-middle text-center">
 										<Button variant="ghost" size="icon">

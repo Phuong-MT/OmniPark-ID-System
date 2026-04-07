@@ -39,7 +39,9 @@ export function PasswordLoginForm() {
 		<form className="space-y-6" onSubmit={handleSubmit}>
 			<div className="space-y-4">
 				<div className="space-y-2">
-					<Label htmlFor="username" className="dark:text-gray-300">Username</Label>
+					<Label htmlFor="username" className="dark:text-gray-300">
+						Username
+					</Label>
 					<Input
 						id="username"
 						type="text"
@@ -53,7 +55,9 @@ export function PasswordLoginForm() {
 				</div>
 
 				<div className="space-y-2">
-					<Label htmlFor="password" className="dark:text-gray-300">Password</Label>
+					<Label htmlFor="password" className="dark:text-gray-300">
+						Password
+					</Label>
 					<Input
 						id="password"
 						type="password"

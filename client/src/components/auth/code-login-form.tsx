@@ -48,7 +48,9 @@ export function CodeLoginForm() {
 		<form className="space-y-6" onSubmit={handleSubmit}>
 			<div className="space-y-4">
 				<div className="space-y-2">
-					<Label htmlFor="email" className="dark:text-gray-300">Email</Label>
+					<Label htmlFor="email" className="dark:text-gray-300">
+						Email
+					</Label>
 					<div className="flex space-x-2">
 						<Input
 							id="email"
@@ -70,12 +72,16 @@ export function CodeLoginForm() {
 						</button>
 					</div>
 					{codeStatus === "succeeded" && (
-						<p className="text-xs text-green-600 dark:text-green-400 mt-1">Verification code sent!</p>
+						<p className="text-xs text-green-600 dark:text-green-400 mt-1">
+							Verification code sent!
+						</p>
 					)}
 				</div>
 
 				<div className="space-y-2">
-					<Label htmlFor="code" className="dark:text-gray-300">Verification Code</Label>
+					<Label htmlFor="code" className="dark:text-gray-300">
+						Verification Code
+					</Label>
 					<Input
 						id="code"
 						type="text"
