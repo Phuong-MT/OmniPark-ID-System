@@ -11,6 +11,7 @@ import { UserModule } from './user/user.module';
 import { TenantModule } from './tenant/tenant.module';
 import { AuthModule } from './auth/auth.module';
 import { MailModule } from './mail/mail.module';
+import { ParksModule } from './parks/parks.module';
 
 @Module({
     imports: [
@@ -29,6 +30,7 @@ import { MailModule } from './mail/mail.module';
         TenantModule,
         AuthModule,
         MailModule,
+        ParksModule,
     ],
     controllers: [AppController],
     providers: [

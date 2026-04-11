@@ -91,6 +91,9 @@ export class Device {
 
     @Prop()
     pairTokenExpiresAt?: Date;
+
+    @Prop({type:Types.ObjectId})
+    clusterId?: Types.ObjectId
 }
 
 export const DeviceSchema = SchemaFactory.createForClass(Device);
