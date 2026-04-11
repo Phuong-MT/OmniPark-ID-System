@@ -16,6 +16,7 @@ export class ParksService {
             tenantCode?: string;
             search?: string;
             status?: string;
+            parkIds?: string[];
         },
         page: number = 1,
         limit: number = 10,
@@ -26,6 +27,13 @@ export class ParksService {
         }
         if (query.status) {
             filter.status = query.status;
+        }
+        if (query.parkIds && query.parkIds.length > 0) {
+            filter._id = { $in: query.parkIds };
+        }
+        if (query.parkIds && query.parkIds.length === 0) {
+            // Force empty result if POC has no assignments
+            filter._id = { $in: [] };
         }
         if (query.search) {
             filter.$or = [
