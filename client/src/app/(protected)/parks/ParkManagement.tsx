@@ -5,7 +5,13 @@ import { useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Search, Map as MapIcon, Plus, Filter, Loader2 } from "lucide-react";
+import {
+	Search,
+	Map as MapIcon,
+	Plus,
+	Filter,
+	Loader2,
+} from "lucide-react";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState, AppDispatch } from "@/redux/store";
 import { fetchParksList } from "@/redux/features/adminParksThunks";
@@ -72,23 +78,7 @@ export function ParkManagement({ currentUserRole }: { currentUserRole: string })
 	};
 
 	return (
-		<div className="flex flex-col gap-6">
-			<div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-				<div>
-					<h1 className="text-3xl font-bold tracking-tight">Park Management</h1>
-					<p className="text-zinc-500 dark:text-zinc-400">
-						{currentUserRole === "POC"
-							? "Manage your assigned parking facilities."
-							: "Manage all parking facilities across the network."}
-					</p>
-				</div>
-				{(currentUserRole === "ADMIN" || currentUserRole === "SUPER_ADMIN") && (
-					<Button>
-						<Plus className="mr-2 h-4 w-4" />
-						Add New Park
-					</Button>
-				)}
-			</div>
+		<>
 
 			<div className="flex flex-col sm:flex-row items-center gap-4 py-4">
 				<div className="relative flex-1 md:max-w-md w-full">
@@ -214,6 +204,6 @@ export function ParkManagement({ currentUserRole }: { currentUserRole: string })
 					</Card>
 				</div>
 			</div>
-		</div>
+		</>
 	);
 }
