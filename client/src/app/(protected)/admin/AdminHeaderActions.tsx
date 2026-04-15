@@ -8,7 +8,7 @@ import { InviteUserModal } from "./InviteUserModal";
 export function AdminHeaderActions({ currentUserRole }: { currentUserRole: string }) {
 	const [isInviteModalOpen, setIsInviteModalOpen] = React.useState(false);
 
-	if (currentUserRole !== "SUPER_ADMIN") return null;
+	if (!["SUPER_ADMIN", "ADMIN"].includes(currentUserRole)) return null;
 
 	return (
 		<>
