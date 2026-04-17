@@ -2,16 +2,9 @@
 
 import * as React from "react";
 import { useEffect, useRef } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-	Search,
-	Map as MapIcon,
-	Plus,
-	Filter,
-	Loader2,
-} from "lucide-react";
+import { Search, Map as MapIcon, Loader2 } from "lucide-react";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState, AppDispatch } from "@/redux/store";
 import { fetchParksList } from "@/redux/features/adminParksThunks";
@@ -79,7 +72,6 @@ export function ParkManagement({ currentUserRole }: { currentUserRole: string })
 
 	return (
 		<>
-
 			<div className="flex flex-col sm:flex-row items-center gap-4 py-4">
 				<div className="relative flex-1 md:max-w-md w-full">
 					<Search className="absolute left-3 top-2.5 h-4 w-4 text-zinc-500" />

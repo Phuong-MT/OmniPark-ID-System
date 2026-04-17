@@ -73,4 +73,34 @@ export class AssignmentsService {
             })
             .lean();
     }
+    async getAssignmentsByMonth(
+        tenantCode: string,
+        year: number,
+        month: number,
+    ) {
+        // month is 1-12.
+        const startDate = new Date(year, month - 1, 1);
+        const endDate = new Date(year, month, 0, 23, 59, 59, 999);
+
+        return this.assignmentModel
+            .find({
+                tenantCode: new Types.ObjectId(tenantCode),
+                $or: [
+                    { 'schedule.startTime': { $exists: false } },
+                    { 'schedule.startTime': null },
+                    { 'schedule.startTime': { $lte: endDate } },
+                ],
+                $and: [
+                    {
+                        $or: [
+                            { 'schedule.endTime': { $exists: false } },
+                            { 'schedule.endTime': null },
+                            { 'schedule.endTime': { $gte: startDate } },
+                        ],
+                    },
+                ],
+            })
+            .populate('pocId', 'username profile')
+            .lean();
+    }
 }

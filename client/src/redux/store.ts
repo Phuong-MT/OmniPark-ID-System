@@ -5,6 +5,7 @@ import adminUsersReducer from "./features/adminUsersSlice";
 import tenantReducer from "./features/tenantSlice";
 import adminDevicesReducer from "./features/adminDevicesSlice";
 import adminParksReducer from "./features/adminParksSlice";
+import assignmentsReducer from "./features/assignmentsSlice";
 import { combineReducers } from "@reduxjs/toolkit";
 
 import { AnyAction } from "@reduxjs/toolkit";
@@ -21,6 +22,7 @@ const combinedReducer = combineReducers({
 	adminUsers: adminUsersReducer,
 	adminDevices: adminDevicesReducer,
 	adminParks: adminParksReducer,
+	assignments: assignmentsReducer,
 });
 
 export const rootReducer = (

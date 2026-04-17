@@ -21,9 +21,9 @@ export class Assignment {
     @Prop({
         type: {
             startTime: { type: Date, required: false },
-            endTime: { type: Date, required: false }
+            endTime: { type: Date, required: false },
         },
-        default: {}
+        default: {},
     })
     schedule?: {
         startTime?: Date;
@@ -33,5 +33,8 @@ export class Assignment {
 
 export const AssignmentSchema = SchemaFactory.createForClass(Assignment);
 
-AssignmentSchema.index({ tenantCode: 1, pocId: 1, parkId: 1 }, { unique: true });
+AssignmentSchema.index(
+    { tenantCode: 1, pocId: 1, parkId: 1 },
+    { unique: true },
+);
 AssignmentSchema.index({ pocId: 1 });

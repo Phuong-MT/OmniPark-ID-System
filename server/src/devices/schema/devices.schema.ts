@@ -92,6 +92,7 @@ export class Device {
     @Prop()
     pairTokenExpiresAt?: Date;
 
+    // Parks Clusters embeded
     @Prop({type:Types.ObjectId})
     clusterId?: Types.ObjectId
 }

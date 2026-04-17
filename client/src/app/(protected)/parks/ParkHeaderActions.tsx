@@ -1,9 +1,15 @@
 "use client";
 
+import * as React from "react";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, UserPlus } from "lucide-react";
+import { AssignPocModal } from "./AssignPocModal";
 
 export function ParkHeaderActions({ currentUserRole }: { currentUserRole: string }) {
+	const [isAssignModalOpen, setIsAssignModalOpen] = React.useState(false);
+
+	const showAdminActions = currentUserRole === "ADMIN" || currentUserRole === "SUPER_ADMIN";
+
 	return (
 		<div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
 			<div>
@@ -14,12 +20,23 @@ export function ParkHeaderActions({ currentUserRole }: { currentUserRole: string
 						: "Manage all parking facilities across the network."}
 				</p>
 			</div>
-			{(currentUserRole === "ADMIN" || currentUserRole === "SUPER_ADMIN") && (
-				<Button>
-					<Plus className="mr-2 h-4 w-4" />
-					Add New Park
-				</Button>
+			{showAdminActions && (
+				<div className="flex items-center gap-2">
+					<Button variant="outline" onClick={() => setIsAssignModalOpen(true)}>
+						<UserPlus className="mr-2 h-4 w-4" />
+						Assign POC
+					</Button>
+					<Button>
+						<Plus className="mr-2 h-4 w-4" />
+						Add New Park
+					</Button>
+				</div>
 			)}
+
+			<AssignPocModal
+				isOpen={isAssignModalOpen}
+				onClose={() => setIsAssignModalOpen(false)}
+			/>
 		</div>
 	);
 }

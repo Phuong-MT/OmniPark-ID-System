@@ -6,6 +6,7 @@ import {
     Delete,
     Param,
     Get,
+    Query,
     UseGuards,
     HttpException,
     HttpStatus,
@@ -56,5 +57,26 @@ export class AssignmentsController {
         @Param('parkId') parkId: string,
     ) {
         return this.assignmentsService.unassignPark(pocId, parkId);
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Get('month')
+    async getAssignmentsByMonth(
+        @Req() req,
+        @Query('year') year: string,
+        @Query('month') month: string,
+    ) {
+        if (!year || !month) {
+            throw new HttpException(
+                'year and month are required',
+                HttpStatus.BAD_REQUEST,
+            );
+        }
+
+        return this.assignmentsService.getAssignmentsByMonth(
+            req.user.tenantCode,
+            parseInt(year),
+            parseInt(month),
+        );
     }
 }
