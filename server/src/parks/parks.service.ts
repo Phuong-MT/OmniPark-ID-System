@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { DBName } from '../utils/connectDB';
 import { Park, ParkDocument } from './schema/park.schema';
 
@@ -60,5 +60,21 @@ export class ParksService {
             page,
             limit,
         };
+    }
+
+    async createPark(createParkDto: { tenantCode: any; name: string; description?: string }) {
+        const existingPark = await this.parkModel.findOne({
+            name: createParkDto.name,
+            tenantCode: createParkDto.tenantCode,
+        });
+        if (existingPark) {
+            throw new Error('Park already exists');
+        }
+        const payload ={
+            ...createParkDto,
+            tenantCode: new Types.ObjectId(createParkDto.tenantCode),
+        }
+        const newPark = new this.parkModel(payload);
+        return newPark.save();
     }
 }

@@ -4,9 +4,11 @@ import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Plus, UserPlus } from "lucide-react";
 import { AssignPocModal } from "./AssignPocModal";
+import { NewParkModal } from "./NewParkModal";
 
 export function ParkHeaderActions({ currentUserRole }: { currentUserRole: string }) {
 	const [isAssignModalOpen, setIsAssignModalOpen] = React.useState(false);
+	const [isNewParkModalOpen, setIsNewParkModalOpen] = React.useState(false);
 
 	const showAdminActions = currentUserRole === "ADMIN" || currentUserRole === "SUPER_ADMIN";
 
@@ -26,7 +28,7 @@ export function ParkHeaderActions({ currentUserRole }: { currentUserRole: string
 						<UserPlus className="mr-2 h-4 w-4" />
 						Assign POC
 					</Button>
-					<Button>
+					<Button onClick={() => setIsNewParkModalOpen(true)}>
 						<Plus className="mr-2 h-4 w-4" />
 						Add New Park
 					</Button>
@@ -36,6 +38,10 @@ export function ParkHeaderActions({ currentUserRole }: { currentUserRole: string
 			<AssignPocModal
 				isOpen={isAssignModalOpen}
 				onClose={() => setIsAssignModalOpen(false)}
+			/>
+			<NewParkModal
+				isOpen={isNewParkModalOpen}
+				onClose={() => setIsNewParkModalOpen(false)}
 			/>
 		</div>
 	);

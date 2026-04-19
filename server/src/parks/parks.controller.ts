@@ -1,10 +1,11 @@
-import { Controller, Get, Req, Query, UseGuards, Logger } from '@nestjs/common';
+import { Controller, Get, Post, Body, Req, Query, UseGuards, Logger } from '@nestjs/common';
 import { ParksService } from './parks.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../user/schema/user.schema';
 import { AssignmentsService } from '../assignments/assignments.service';
+import { CreateParkDto } from './dto/create-park.dto';
 
 @Controller('parks')
 export class ParksController {
@@ -45,5 +46,16 @@ export class ParksController {
             pageNum,
             limitNum,
         );
+    }
+
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+    @Post()
+    async create(@Req() req, @Body() createParkDto: CreateParkDto) {
+        const user = req.user;
+        return this.parksService.createPark({
+            ...createParkDto,
+            tenantCode: user.tenantCode,
+        });
     }
 }

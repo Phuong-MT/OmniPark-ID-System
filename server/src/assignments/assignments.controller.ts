@@ -22,7 +22,7 @@ export class AssignmentsController {
     constructor(private readonly assignmentsService: AssignmentsService) {}
 
     @UseGuards(JwtAuthGuard, RolesGuard)
-    @Roles(UserRole.ADMIN)
+    @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
     @Post()
     async assignPark(
         @Req() req,
@@ -50,7 +50,7 @@ export class AssignmentsController {
     }
 
     @UseGuards(JwtAuthGuard, RolesGuard)
-    @Roles(UserRole.ADMIN)
+    @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
     @Delete(':pocId/:parkId')
     async unassignPark(
         @Param('pocId') pocId: string,

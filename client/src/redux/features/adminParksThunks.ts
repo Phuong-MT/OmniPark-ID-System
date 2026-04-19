@@ -33,3 +33,22 @@ export const fetchParksList = createAsyncThunk(
         }
     }
 );
+
+interface CreateParkPayload {
+    name: string;
+    description?: string;
+}
+
+export const createNewPark = createAsyncThunk(
+    "adminParks/createNewPark",
+    async (payload: CreateParkPayload, { rejectWithValue }) => {
+        try {
+            const response = await axiosClient.post("/parks", payload);
+            return response.data;
+        } catch (error: any) {
+            return rejectWithValue(
+                error.response?.data?.message || "Failed to create park"
+            );
+        }
+    }
+);
