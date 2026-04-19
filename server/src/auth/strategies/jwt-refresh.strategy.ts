@@ -31,7 +31,7 @@ export class JwtRefreshStrategy extends PassportStrategy(
         const refreshToken = request?.cookies['refreshToken'];
         return {
             userId: payload.userId,
-            tenantId: payload.tenantId,
+            tenantCode: payload.tenantCode,
             role: payload.role,
             refreshToken,
         };

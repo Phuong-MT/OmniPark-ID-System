@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { DBName } from '../utils/connectDB';
@@ -6,6 +6,7 @@ import { Park, ParkDocument } from './schema/park.schema';
 
 @Injectable()
 export class ParksService {
+    private readonly logger = new Logger(ParksService.name);
     constructor(
         @InjectModel(Park.name, DBName.omniparkIDSystem)
         private readonly parkModel: Model<ParkDocument>,
@@ -23,7 +24,7 @@ export class ParksService {
     ) {
         const filter: any = {};
         if (query.tenantCode) {
-            filter.tenantCode = query.tenantCode;
+            filter.tenantCode = new Types.ObjectId(query.tenantCode);
         }
         if (query.status) {
             filter.status = query.status;

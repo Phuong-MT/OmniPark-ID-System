@@ -70,8 +70,29 @@ export function ScheduleBoard({ now }: { now: string }) {
 
 				if (covers) {
 					const p = scheduledPocs.find((p) => p.id === a.pocId?._id);
-					if (p && !pocsForDay.find((existing) => existing.id === p.id)) {
-						pocsForDay.push(p);
+					if (p) {
+						let shiftType = "full";
+						if (start && end) {
+							const startH = start.getHours() + start.getMinutes() / 60;
+							const endH = end.getHours() + end.getMinutes() / 60;
+							
+							if (endH <= 12.5) {
+								shiftType = "morning";
+							} else if (startH >= 12.5) {
+								shiftType = "afternoon";
+							} else {
+								shiftType = "full";
+							}
+						}
+
+						const existing = pocsForDay.find((existing) => existing.id === p.id);
+						if (!existing) {
+							pocsForDay.push({ ...p, shiftType });
+						} else {
+							if (existing.shiftType !== shiftType) {
+								existing.shiftType = "full";
+							}
+						}
 					}
 				}
 			});
@@ -98,7 +119,7 @@ export function ScheduleBoard({ now }: { now: string }) {
 									year: "numeric",
 								})}
 							</CardDescription>
-							<div className="flex items-center gap-3 mt-1">
+							<div className="flex flex-wrap items-center gap-3 mt-1">
 								{scheduledPocs.map((poc) => (
 									<button
 										key={poc.id}
@@ -200,7 +221,15 @@ export function ScheduleBoard({ now }: { now: string }) {
 											key={poc.id}
 											src={poc.avatar}
 											alt={poc.name}
-											className={`w-6 h-6 rounded-full border border-white dark:border-zinc-800 transition-all ${selectedPocId === poc.id ? "ring-2 ring-blue-500 scale-110 relative z-10 shadow-[0_0_8px_rgba(59,130,246,0.5)]" : ""}`}
+											className={`w-6 h-6 rounded-full border-[2px] transition-all ${
+												poc.shiftType === "morning"
+													? "border-yellow-400"
+													: poc.shiftType === "afternoon"
+														? "border-green-500"
+														: poc.shiftType === "full"
+															? "border-blue-500"
+															: "border-white dark:border-zinc-800"
+											} ${selectedPocId === poc.id ? "ring-2 ring-blue-500 scale-110 relative z-10 shadow-[0_0_8px_rgba(59,130,246,0.5)]" : ""}`}
 											style={
 												selectedPocId === poc.id
 													? {}

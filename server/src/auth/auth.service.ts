@@ -38,7 +38,7 @@ export class AuthService {
 
     return {
       userId: user._id.toString(),
-      tenantId: user.tenantCode.toString(),
+      tenantCode: user.tenantCode.toString(),
       role: user.role,
     };
   }
@@ -91,7 +91,7 @@ export class AuthService {
 
     return {
       userId: user._id.toString(),
-      tenantId: user.tenantCode.toString(),
+      tenantCode: user.tenantCode.toString(),
       role: user.role,
     };
   }
@@ -123,7 +123,7 @@ export class AuthService {
   async login(user: any) {
     const payload = {
       userId: user.userId,
-      tenantId: user.tenantId,
+      tenantCode: user.tenantCode,
       role: user.role,
     };
 
@@ -146,7 +146,7 @@ export class AuthService {
   async refresh(user: any) {
     const payload = {
       userId: user.userId,
-      tenantId: user.tenantId,
+      tenantCode: user.tenantCode,
       role: user.role,
     };
 

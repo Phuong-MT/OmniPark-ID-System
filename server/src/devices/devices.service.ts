@@ -4,7 +4,7 @@ import {
     NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { Device, DeviceDocument, DeviceStatus } from './schema/devices.schema';
 import { DBName } from 'src/utils/connectDB';
 
@@ -62,7 +62,7 @@ export class DevicesService {
     ) {
         const filter: any = {};
         if (query.tenantCode) {
-            filter.tenantCode = query.tenantCode;
+            filter.tenantCode = new Types.ObjectId(query.tenantCode);
         }
 
         if (query.type) filter.type = query.type;
@@ -187,7 +187,7 @@ export class DevicesService {
                 $setOnInsert: {
                     macAddress: macUpper,
                     type: payload.type,
-                    tenantCode: payload.tenantCode,
+                    tenantCode: new Types.ObjectId(payload.tenantCode),
                     status: DeviceStatus.INACTIVE, // Not active until token is confirmed
                     deviceName:
                         payload.deviceName ||

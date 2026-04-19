@@ -44,7 +44,7 @@ export class AssignmentsController {
             tenantCode: req.user.tenantCode,
             pocId: body.pocId,
             parkId: body.parkId,
-            assignedBy: req.user._id,
+            assignedBy: req.user.userId,
             schedule: body.schedule,
         });
     }

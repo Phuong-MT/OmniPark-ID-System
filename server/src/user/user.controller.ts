@@ -82,7 +82,7 @@ export class UserController {
     @Post('invite')
     async inviteUser(@Req() req: Request, @Body() inviteUserDto: InviteUserDto) {
         const currentUser = req.user as any;
-        let targetTenantId = currentUser?.tenantId;
+        let targetTenantId = currentUser?.tenantCode;
 
         // If SUPER_ADMIN provides a specific tenantId, use it
         if (currentUser?.role === UserRole.SUPER_ADMIN && inviteUserDto.tenantId) {
@@ -117,7 +117,7 @@ export class UserController {
             role,
             tenantCode,
             currentUser?.role,
-            currentUser?.tenantId,
+            currentUser?.tenantCode,
             search
         );
 

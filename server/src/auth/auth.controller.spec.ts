@@ -36,7 +36,7 @@ describe('AuthController', () => {
 
     describe('login', () => {
         it('should login and set cookies', async () => {
-            const mockUser = { userId: '1', tenantId: 't1', role: 'admin' };
+            const mockUser = { userId: '1', tenantCode: 't1', role: 'admin' };
             const tokens = { accessToken: 'access', refreshToken: 'refresh' };
             authService.validateUser.mockResolvedValue(mockUser);
             authService.login.mockResolvedValue(tokens);
@@ -95,7 +95,7 @@ describe('AuthController', () => {
 
     describe('loginWithCode', () => {
         it('should login and set cookies', async () => {
-            const mockUser = { userId: '1', tenantId: 't1', role: 'admin' };
+            const mockUser = { userId: '1', tenantCode: 't1', role: 'admin' };
             const tokens = { accessToken: 'access', refreshToken: 'refresh' };
             authService.validateCodeAndLogin.mockResolvedValue(mockUser);
             authService.login.mockResolvedValue(tokens);
@@ -116,7 +116,7 @@ describe('AuthController', () => {
 
     describe('refresh', () => {
         it('should refresh access token and set cookie', async () => {
-            const user = { userId: '1', tenantId: 't1', role: 'admin' };
+            const user = { userId: '1', tenantCode: 't1', role: 'admin' };
             const mockReq = { user } as unknown as Request;
             const mockRes = { cookie: jest.fn() } as unknown as Response;
 

@@ -37,7 +37,7 @@ export class ParksController {
         let parkIds: string[] | undefined = undefined;
         if (user.role === UserRole.POC) {
             const pocAssignments =
-                await this.assignmentsService.getPocAssignments(user._id);
+                await this.assignmentsService.getPocAssignments(user.userId);
             parkIds = pocAssignments.map((a) => a.parkId.toString());
         }
 

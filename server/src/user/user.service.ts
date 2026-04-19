@@ -25,12 +25,12 @@ export class UserService {
     }
 
     async create(dto: InviteUserDto, tenantCode: string): Promise<UserDocument> {
-        const existingUsername = await this.userModel.findOne({ username: dto.username }).exec();
+        const existingUsername = await this.userModel.findOne({ username: dto.username, tenantCode: new Types.ObjectId(tenantCode) }).exec();
         if (existingUsername) {
             throw new ConflictException('Username already exists');
         }
 
-        const existingEmail = await this.userModel.findOne({ email: dto.email }).exec();
+        const existingEmail = await this.userModel.findOne({ email: dto.email, tenantCode: new Types.ObjectId(tenantCode) }).exec();
         if (existingEmail) {
             throw new ConflictException('Email already exists');
         }

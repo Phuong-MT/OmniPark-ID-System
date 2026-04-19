@@ -19,7 +19,7 @@ export function InviteUserModal({ isOpen, onClose, currentUserRole }: InviteUser
 		username: "",
 		email: "",
 		phone: "",
-		role: "USER",
+		role: "POC",
 		tenantId: "", // SUPER_ADMIN can pick; standard ADMIN ignores this
 	});
 

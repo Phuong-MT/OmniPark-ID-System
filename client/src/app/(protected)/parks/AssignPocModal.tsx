@@ -104,34 +104,25 @@ export function AssignPocModal({ isOpen, onClose }: AssignPocModalProps) {
 	);
 
 	const {
-		pocsList,
-		pocsPage,
-		pocsHasMore,
-		pocsLoading,
-		pocsError,
-		parksList,
-		parksPage,
-		parksHasMore,
-		parksLoading,
-		parksError,
-	} = useSelector((state: RootState) => {
-		const adminUsers = state.adminUsers;
-		const adminParks = state.adminParks;
+		users: allUsers,
+		page: pocsPage,
+		hasMore: pocsHasMore,
+		loading: pocsLoading,
+		error: pocsError,
+	} = useSelector((state: RootState) => state.adminUsers);
 
-		return {
-			pocsList: adminUsers.users.filter((u) => u.role === "POC"),
-			pocsPage: adminUsers.page,
-			pocsHasMore: adminUsers.hasMore,
-			pocsLoading: adminUsers.loading,
-			pocsError: adminUsers.error,
+	const {
+		parks: parksList,
+		page: parksPage,
+		hasMore: parksHasMore,
+		loading: parksLoading,
+		error: parksError,
+	} = useSelector((state: RootState) => state.adminParks);
 
-			parksList: adminParks.parks,
-			parksPage: adminParks.page,
-			parksHasMore: adminParks.hasMore,
-			parksLoading: adminParks.loading,
-			parksError: adminParks.error,
-		};
-	});
+	const pocsList = React.useMemo(
+		() => allUsers.filter((u) => u.role === "POC"),
+		[allUsers]
+	);
 
 	const loadingModalData = pocsLoading && parksLoading;
 	const errorModalData = (pocsError || parksError) ?? undefined;
@@ -258,9 +249,9 @@ export function AssignPocModal({ isOpen, onClose }: AssignPocModalProps) {
 							</div>
 
 							<div className="flex flex-col gap-2">
-								<label className="text-sm font-medium">Start Date (Optional)</label>
+								<label className="text-sm font-medium">Start Date & Time (Optional)</label>
 								<input
-									type="date"
+									type="datetime-local"
 									className="flex h-9 w-full rounded-md border border-zinc-200 bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-950 dark:border-zinc-800 dark:focus-visible:ring-zinc-300"
 									value={startTime}
 									onChange={(e) => setStartTime(e.target.value)}
@@ -268,9 +259,9 @@ export function AssignPocModal({ isOpen, onClose }: AssignPocModalProps) {
 							</div>
 
 							<div className="flex flex-col gap-2">
-								<label className="text-sm font-medium">End Date (Optional)</label>
+								<label className="text-sm font-medium">End Date & Time (Optional)</label>
 								<input
-									type="date"
+									type="datetime-local"
 									className="flex h-9 w-full rounded-md border border-zinc-200 bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-950 dark:border-zinc-800 dark:focus-visible:ring-zinc-300"
 									value={endTime}
 									onChange={(e) => setEndTime(e.target.value)}

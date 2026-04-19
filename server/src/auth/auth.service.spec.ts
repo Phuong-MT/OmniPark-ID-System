@@ -71,7 +71,7 @@ describe('AuthService', () => {
 
             expect(result).toEqual({
                 userId: '123',
-                tenantId: 'tenant1',
+                tenantCode: 'tenant1',
                 role: 'admin',
             });
             expect(userService.findByUsername).toHaveBeenCalledWith(
@@ -177,7 +177,7 @@ describe('AuthService', () => {
 
             const result = await service.validateCodeAndLogin('test@example.com', '123456');
 
-            expect(result).toEqual({ userId: '123', tenantId: 'tenant1', role: 'admin' });
+            expect(result).toEqual({ userId: '123', tenantCode: 'tenant1', role: 'admin' });
             expect(userService.clearVerificationCode).toHaveBeenCalledWith('123');
         });
 
@@ -241,7 +241,7 @@ describe('AuthService', () => {
 
             const result = await service.login({
                 userId: '123',
-                tenantId: 'tenant1',
+                tenantCode: 'tenant1',
                 role: 'admin',
             });
 
@@ -260,7 +260,7 @@ describe('AuthService', () => {
 
             const result = await service.refresh({
                 userId: '123',
-                tenantId: 'tenant1',
+                tenantCode: 'tenant1',
                 role: 'admin',
             });
 
