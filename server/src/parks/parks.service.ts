@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { DBName } from '../utils/connectDB';
@@ -61,6 +61,22 @@ export class ParksService {
             page,
             limit,
         };
+    }
+
+    async getParkById(id: string, tenantCode?: string) {
+        if (!Types.ObjectId.isValid(id)) {
+            throw new BadRequestException('Invalid Park ID format');
+        }
+
+        const filter: any = { _id: new Types.ObjectId(id) };
+        if (tenantCode) {
+            filter.tenantCode = new Types.ObjectId(tenantCode);
+        }
+        const park = await this.parkModel.findOne(filter).lean();
+        if (!park) {
+            throw new NotFoundException('Park not found');
+        }
+        return park;
     }
 
     async createPark(createParkDto: { tenantCode: any; name: string; description?: string }) {

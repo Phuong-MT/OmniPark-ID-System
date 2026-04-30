@@ -11,9 +11,19 @@ import { fetchAssignmentsByMonth } from "@/redux/features/assignmentsThunks";
 export function ScheduleBoard({ now }: { now: string }) {
 	const [currentDisplayMonth, setCurrentDisplayMonth] = React.useState<Date>(new Date(now));
 	const [selectedPocId, setSelectedPocId] = React.useState<string | null>(null);
+	const [dayPocDetails, setDayPocDetails] = React.useState<{ day: number; id: string } | null>(null);
 	const dispatch = useDispatch<AppDispatch>();
 	const { assignments, loadingAssignments } = useSelector(
 		(state: RootState) => state.assignments,
+	);
+	const { parks } = useSelector((state: RootState) => state.adminParks);
+
+	const getParkName = React.useCallback(
+		(id: string) => {
+			const park = parks.find((p) => p._id === id);
+			return park ? park.name : id;
+		},
+		[parks],
 	);
 
 	const year = currentDisplayMonth.getFullYear();
@@ -34,17 +44,24 @@ export function ScheduleBoard({ now }: { now: string }) {
 	const scheduledPocs = React.useMemo(() => {
 		const pocMap = new Map();
 		assignments.forEach((a) => {
-			if (a.pocId && a.pocId._id && !pocMap.has(a.pocId._id)) {
-				pocMap.set(a.pocId._id, {
-					id: a.pocId._id,
-					name: a.pocId.profile?.fullName || a.pocId.username || "Unknown",
-					avatar:
-						a.pocId.profile?.avatar ||
-						`https://ui-avatars.com/api/?name=${encodeURIComponent(a.pocId.username || "U")}`,
-				});
+			if (a.pocId && a.pocId._id) {
+				if (!pocMap.has(a.pocId._id)) {
+					pocMap.set(a.pocId._id, {
+						id: a.pocId._id,
+						name: a.pocId.profile?.fullName || a.pocId.username || "Unknown",
+						avatar:
+							a.pocId.profile?.avatar ||
+							`https://ui-avatars.com/api/?name=${encodeURIComponent(a.pocId.username || "U")}`,
+						parkIds: new Set(a.parkId ? [a.parkId] : []),
+					});
+				} else {
+					if (a.parkId) {
+						pocMap.get(a.pocId._id).parkIds.add(a.parkId);
+					}
+				}
 			}
 		});
-		return Array.from(pocMap.values());
+		return Array.from(pocMap.values()).map(p => ({ ...p, parkIds: Array.from(p.parkIds) }));
 	}, [assignments]);
 
 	const schedules = React.useMemo(() => {
@@ -87,10 +104,13 @@ export function ScheduleBoard({ now }: { now: string }) {
 
 						const existing = pocsForDay.find((existing) => existing.id === p.id);
 						if (!existing) {
-							pocsForDay.push({ ...p, shiftType });
+							pocsForDay.push({ ...p, shiftType, parkIds: a.parkId ? [a.parkId] : [] });
 						} else {
 							if (existing.shiftType !== shiftType) {
 								existing.shiftType = "full";
+							}
+							if (a.parkId && !existing.parkIds.includes(a.parkId)) {
+								existing.parkIds.push(a.parkId);
 							}
 						}
 					}
@@ -145,6 +165,12 @@ export function ScheduleBoard({ now }: { now: string }) {
 									</button>
 								))}
 							</div>
+							{selectedPocId && (
+								<div className="mt-2 text-sm text-zinc-600 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-900 p-2 rounded-md border border-zinc-200 dark:border-zinc-800">
+									<span className="font-semibold text-zinc-900 dark:text-zinc-100">Parks: </span>
+									{scheduledPocs.find(p => p.id === selectedPocId)?.parkIds.map(getParkName).join(", ") || "None"}
+								</div>
+							)}
 						</div>
 					</div>
 					<div className="flex items-center gap-2">
@@ -215,27 +241,38 @@ export function ScheduleBoard({ now }: { now: string }) {
 								>
 									{dayNum}
 								</span>
-								<div className="flex flex-wrap gap-1 mt-auto">
+								<div className="flex flex-wrap gap-1 mt-auto relative">
 									{visiblePocs.map((poc, idx) => (
-										<img
-											key={poc.id}
-											src={poc.avatar}
-											alt={poc.name}
-											className={`w-6 h-6 rounded-full border-[2px] transition-all ${
-												poc.shiftType === "morning"
-													? "border-yellow-400"
-													: poc.shiftType === "afternoon"
-														? "border-green-500"
-														: poc.shiftType === "full"
-															? "border-blue-500"
-															: "border-white dark:border-zinc-800"
-											} ${selectedPocId === poc.id ? "ring-2 ring-blue-500 scale-110 relative z-10 shadow-[0_0_8px_rgba(59,130,246,0.5)]" : ""}`}
-											style={
-												selectedPocId === poc.id
-													? {}
-													: { zIndex: visiblePocs.length - idx }
-											}
-										/>
+										<div key={poc.id} className="relative inline-block">
+											<img
+												src={poc.avatar}
+												alt={poc.name}
+												onClick={(e) => {
+													e.stopPropagation();
+													setDayPocDetails(dayPocDetails?.id === poc.id && dayPocDetails?.day === dayNum ? null : { day: dayNum, id: poc.id });
+												}}
+												className={`w-6 h-6 rounded-full border-[2px] transition-all cursor-pointer ${
+													poc.shiftType === "morning"
+														? "border-yellow-400"
+														: poc.shiftType === "afternoon"
+															? "border-green-500"
+															: poc.shiftType === "full"
+																? "border-blue-500"
+																: "border-white dark:border-zinc-800"
+												} ${selectedPocId === poc.id ? "ring-2 ring-blue-500 scale-110 relative z-10 shadow-[0_0_8px_rgba(59,130,246,0.5)]" : ""}`}
+												style={
+													selectedPocId === poc.id
+														? {}
+														: { zIndex: visiblePocs.length - idx }
+												}
+											/>
+											{dayPocDetails?.id === poc.id && dayPocDetails?.day === dayNum && (
+												<div className="absolute z-[100] bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-[200px] bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 text-xs rounded-md shadow-lg border border-zinc-200 dark:border-zinc-700 p-2 cursor-auto">
+													<div className="font-semibold border-b border-zinc-200 dark:border-zinc-700 pb-1 mb-1">{poc.name}</div>
+													<div className="break-words whitespace-normal">Parks: {poc.parkIds.map(getParkName).join(", ")}</div>
+												</div>
+											)}
+										</div>
 									))}
 								</div>
 

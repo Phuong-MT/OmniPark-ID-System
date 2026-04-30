@@ -4,7 +4,8 @@ import * as React from "react";
 import { useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Search, Map as MapIcon, Loader2 } from "lucide-react";
+import { Search, Map as MapIcon, Loader2, ArrowRight } from "lucide-react";
+import Link from "next/link";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState, AppDispatch } from "@/redux/store";
 import { fetchParksList } from "@/redux/features/adminParksThunks";
@@ -156,6 +157,15 @@ export function ParkManagement({ currentUserRole }: { currentUserRole: string })
 										<span className="font-medium text-green-600 dark:text-green-400">
 											{park.stats?.onlineDevices || 0}
 										</span>
+									</div>
+									<div className="flex justify-between items-center text-sm mt-4 pt-4 border-t border-zinc-100 dark:border-zinc-800">
+										<Link
+											href={`/parks/${park._id}`}
+											className="text-blue-600 dark:text-blue-400 font-medium hover:underline flex items-center gap-1"
+											onClick={(e) => e.stopPropagation()}
+										>
+											View Details <ArrowRight className="h-3 w-3" />
+										</Link>
 									</div>
 								</CardContent>
 							</Card>

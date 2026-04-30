@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Req, Query, UseGuards, Logger } from '@nestjs/common';
+import { Controller, Get, Post, Body, Req, Query, Param, UseGuards, Logger } from '@nestjs/common';
 import { ParksService } from './parks.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -57,5 +57,14 @@ export class ParksController {
             ...createParkDto,
             tenantCode: user.tenantCode,
         });
+    }
+
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.POC)
+    @Get(':id')
+    async findOne(@Req() req, @Param('id') id: string) {
+        const user = req.user;
+        const tenantCode = user.role === UserRole.SUPER_ADMIN ? undefined : user.tenantCode;
+        return this.parksService.getParkById(id, tenantCode);
     }
 }
