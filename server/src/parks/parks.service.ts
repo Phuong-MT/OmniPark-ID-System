@@ -30,7 +30,7 @@ export class ParksService {
             filter.status = query.status;
         }
         if (query.parkIds && query.parkIds.length > 0) {
-            filter._id = { $in: query.parkIds };
+            filter._id = { $in: query.parkIds.map((id: string) => new Types.ObjectId(id)) };
         }
         if (query.parkIds && query.parkIds.length === 0) {
             // Force empty result if POC has no assignments

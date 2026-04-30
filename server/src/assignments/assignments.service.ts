@@ -16,25 +16,40 @@ export class AssignmentsService {
         pocId: Types.ObjectId | string;
         parkId: Types.ObjectId | string;
         assignedBy: Types.ObjectId | string;
-        schedule?: { startTime?: Date; endTime?: Date };
+        schedule: { startTime: Date; endTime: Date };
     }) {
         const pocId = new Types.ObjectId(payload.pocId);
         const parkId = new Types.ObjectId(payload.parkId);
+        const tenantCode = new Types.ObjectId(payload.tenantCode);
+        
+        const newStart = new Date(payload.schedule.startTime);
+        const newEnd = new Date(payload.schedule.endTime);
 
         const existing = await this.assignmentModel.findOne({
             pocId,
             parkId,
+            tenantCode,
+            $or: [
+                { 'schedule.startTime': { $exists: false } },
+                { 'schedule.startTime': null },
+                { 'schedule.endTime': { $exists: false } },
+                { 'schedule.endTime': null },
+                {
+                    'schedule.startTime': { $lt: newEnd },
+                    'schedule.endTime': { $gt: newStart },
+                },
+            ],
         });
 
         if (existing) {
             throw new ConflictException(
-                'This park is already assigned to this POC.',
+                'This park is already assigned to this POC during the specified time period.',
             );
         }
 
         return this.assignmentModel.create({
             ...payload,
-            tenantCode: new Types.ObjectId(payload.tenantCode),
+            tenantCode,
             pocId,
             parkId,
             assignedBy: payload.assignedBy

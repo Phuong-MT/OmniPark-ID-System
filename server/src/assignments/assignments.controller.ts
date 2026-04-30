@@ -30,12 +30,12 @@ export class AssignmentsController {
         body: {
             pocId: string;
             parkId: string;
-            schedule?: { startTime?: Date; endTime?: Date };
+            schedule: { startTime: Date; endTime: Date };
         },
     ) {
-        if (!body.pocId || !body.parkId) {
+        if (!body.pocId || !body.parkId || !body.schedule || !body.schedule.startTime || !body.schedule.endTime) {
             throw new HttpException(
-                'pocId and parkId are required',
+                'pocId and parkId and schedule are required',
                 HttpStatus.BAD_REQUEST,
             );
         }

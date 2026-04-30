@@ -33,8 +33,5 @@ export class Assignment {
 
 export const AssignmentSchema = SchemaFactory.createForClass(Assignment);
 
-AssignmentSchema.index(
-    { tenantCode: 1, pocId: 1, parkId: 1 },
-    { unique: true },
-);
+AssignmentSchema.index({ tenantCode: 1, pocId: 1, parkId: 1 });
 AssignmentSchema.index({ pocId: 1 });
