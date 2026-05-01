@@ -1,0 +1,5 @@
+api: yes
+apiAddress: :9997
+
+paths:
+  all_others:
