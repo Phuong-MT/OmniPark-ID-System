@@ -1,5 +1,8 @@
 api: yes
 apiAddress: :9997
 
+webrtc: yes
+webrtcAddress: :8889
+
 paths:
   all_others:
