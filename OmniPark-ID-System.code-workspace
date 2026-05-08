@@ -21,5 +21,8 @@
         {
             "path": "devices/shared-libs",
         },
+        {
+            "path": "server-edge",
+        }
     ],
 }
