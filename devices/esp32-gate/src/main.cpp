@@ -8,6 +8,7 @@
 #include <ArduinoJson.h>
 #include <ctime>
 #include <string>
+#include "display/OledDisplay.h"
 
 using namespace std;
 
@@ -26,10 +27,18 @@ PairingHandler pairing(
     mqtt, "GATE",
     "OMNIPARK_DEMO"); // Hardcoded tenant for now, should come from config
 
+String lastCartId = "";
 RFIDScanner rfidScanner(5, 21); // SS pin 5, RST pin 21
+OledDisplay oledDisplay(17, 16);
 
-void onCardScanned(const String &cardId)
+void onCardScanned(const String &cardId, bool isError)
 {
+    if (isError) {
+        oledDisplay.showError();
+        return;
+    }
+    oledDisplay.showGreeting(cardId);
+
     Serial.println("Card scanned: " + cardId);
 
     StaticJsonDocument<128> doc;
@@ -109,6 +118,8 @@ void setup()
     // pairing.begin();
     mqtt.begin();
 
+    oledDisplay.begin();
+
     rfidScanner.setCallback(onCardScanned);
     rfidScanner.begin();
 }
@@ -117,6 +128,7 @@ void loop()
 {
     mqtt.loop();
     rfidScanner.loop();
+    oledDisplay.loop();
 
     if (!wifi.connected())
         return;
