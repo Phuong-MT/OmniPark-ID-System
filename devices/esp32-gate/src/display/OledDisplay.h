@@ -5,10 +5,11 @@
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
+#include "../_core/gate_type.h"
 
 class OledDisplay {
 public:
-    OledDisplay(uint8_t sdaPin, uint8_t sclPin, uint8_t width = 128, uint8_t height = 64);
+    OledDisplay(GateType type, TwoWire* wireBus = &Wire, uint8_t address = 0x3C, uint8_t width = 128, uint8_t height = 64);
     
     bool begin();
     void loop(); // to handle auto-clearing
@@ -20,8 +21,9 @@ public:
     void showMessage(const String& msg, uint8_t textSize = 1, bool clearScreen = true);
 
 private:
-    uint8_t _sdaPin;
-    uint8_t _sclPin;
+    GateType _gateType;
+    TwoWire* _wireBus;
+    uint8_t _address;
     Adafruit_SSD1306 _display;
     unsigned long _displayClearMs;
 };

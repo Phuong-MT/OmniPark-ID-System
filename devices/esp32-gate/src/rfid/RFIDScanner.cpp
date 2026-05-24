@@ -1,14 +1,12 @@
 #include "RFIDScanner.h"
 
-RFIDScanner::RFIDScanner(uint8_t ssPin, uint8_t rstPin)
-    : _ssPin(ssPin), _rstPin(rstPin), _mfrc522(ssPin, rstPin), _callback(nullptr), _lastReadMs(0)
+RFIDScanner::RFIDScanner(GateType type, uint8_t ssPin, uint8_t rstPin)
+    : _gateType(type), _ssPin(ssPin), _rstPin(rstPin), _mfrc522(ssPin, rstPin), _callback(nullptr), _lastReadMs(0)
 {
 }
 
 void RFIDScanner::begin()
 {
-    // Explicitly set SPI pins for ESP32 (SCK=18, MISO=19, MOSI=23, SS=5)
-    SPI.begin(18, 19, 23, _ssPin);
     delay(50); // Give it some time to stabilize
     _mfrc522.PCD_Init();
     delay(50); // Optional delay
@@ -16,7 +14,7 @@ void RFIDScanner::begin()
     Serial.println(F("RFID Scanner initialized."));
 }
 
-void RFIDScanner::setCallback(void (*cb)(const String &, bool))
+void RFIDScanner::setCallback(void (*cb)(GateType, const String &, bool))
 {
     _callback = cb;
 }
@@ -34,7 +32,7 @@ void RFIDScanner::loop()
     {
         if (_callback != nullptr)
         {
-            _callback("", true); // Notify error
+            _callback(_gateType, "", true); // Notify error
         }
         return;
     }
@@ -56,7 +54,7 @@ void RFIDScanner::loop()
 
         if (_callback != nullptr)
         {
-            _callback(cardId, false);
+            _callback(_gateType, cardId, false);
         }
 
         _lastCardId = cardId;

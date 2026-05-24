@@ -1,14 +1,13 @@
 #include "OledDisplay.h"
 
-OledDisplay::OledDisplay(uint8_t sdaPin, uint8_t sclPin, uint8_t width, uint8_t height)
-    : _sdaPin(sdaPin), _sclPin(sclPin), _display(width, height, &Wire, -1), _displayClearMs(0)
+OledDisplay::OledDisplay(GateType type, TwoWire* wireBus, uint8_t address, uint8_t width, uint8_t height)
+    : _gateType(type), _wireBus(wireBus), _address(address), _display(width, height, wireBus, -1), _displayClearMs(0)
 {
 }
 
 bool OledDisplay::begin()
 {
-    Wire.begin(_sdaPin, _sclPin);
-    if (!_display.begin(SSD1306_SWITCHCAPVCC, 0x3C))
+    if (!_display.begin(SSD1306_SWITCHCAPVCC, _address))
     {
         Serial.println(F("SSD1306 allocation failed"));
         return false;
@@ -52,6 +51,9 @@ void OledDisplay::showError()
 
 void OledDisplay::showGreeting(const String &cardId)
 {
+    String gateName = (_gateType == GateType::ENTRY) ? "ENTRY" : "EXIT";
+    Serial.println("[" + gateName + "] OLED: showing greeting for " + cardId);
+
     _display.clearDisplay();
     _display.setCursor(0, 0);
     _display.setTextSize(2);

@@ -9,6 +9,8 @@
 #include <ctime>
 #include <string>
 #include "display/OledDisplay.h"
+#include "servo/GateServo.h"
+#include "_core/gate_type.h"
 
 using namespace std;
 
@@ -28,22 +30,44 @@ PairingHandler pairing(
     "OMNIPARK_DEMO"); // Hardcoded tenant for now, should come from config
 
 String lastCartId = "";
-RFIDScanner rfidScanner(5, 21); // SS pin 5, RST pin 21
-OledDisplay oledDisplay(17, 16);
 
-void onCardScanned(const String &cardId, bool isError)
+#define SS_PIN_ENTRY 5
+#define SS_PIN_EXIT  4
+#define RST_PIN      21
+#define I2C_SDA_PIN  17
+#define I2C_SCL_PIN  16
+#define SERVO_PIN_ENTRY 12
+#define SERVO_PIN_EXIT  13
+
+RFIDScanner entryScanner(GateType::ENTRY, SS_PIN_ENTRY, RST_PIN);
+RFIDScanner exitScanner(GateType::EXIT, SS_PIN_EXIT, RST_PIN);
+
+OledDisplay entryOled(GateType::ENTRY, &Wire, 0x3C);
+OledDisplay exitOled(GateType::EXIT, &Wire, 0x3D);
+
+GateServo entryServo(GateType::ENTRY, SERVO_PIN_ENTRY);
+GateServo exitServo(GateType::EXIT, SERVO_PIN_EXIT);
+
+void onCardScanned(GateType type, const String &cardId, bool isError)
 {
+    String gateName = (type == GateType::ENTRY) ? "ENTRY" : "EXIT";
+    OledDisplay& targetOled = (type == GateType::ENTRY) ? entryOled : exitOled;
+    GateServo& targetServo = (type == GateType::ENTRY) ? entryServo : exitServo;
+
     if (isError) {
-        oledDisplay.showError();
+        targetOled.showError();
         return;
     }
-    oledDisplay.showGreeting(cardId);
+    
+    targetOled.showGreeting(cardId);
+    targetServo.open();
 
-    Serial.println("Card scanned: " + cardId);
+    Serial.println("[" + gateName + "] Card scanned: " + cardId);
 
     StaticJsonDocument<128> doc;
     doc["mac"] = macStr.c_str();
     doc["card_id"] = cardId.c_str();
+    doc["gate"] = gateName.c_str();
     doc["timestamp"] = std::time(nullptr);
 
     char buffer[128];
@@ -118,17 +142,31 @@ void setup()
     // pairing.begin();
     mqtt.begin();
 
-    oledDisplay.begin();
+    SPI.begin(18, 19, 23); // SCK, MISO, MOSI
+    Wire.begin(I2C_SDA_PIN, I2C_SCL_PIN);
 
-    rfidScanner.setCallback(onCardScanned);
-    rfidScanner.begin();
+    entryOled.begin();
+    exitOled.begin();
+
+    entryScanner.setCallback(onCardScanned);
+    entryScanner.begin();
+
+    exitScanner.setCallback(onCardScanned);
+    exitScanner.begin();
+
+    entryServo.begin();
+    exitServo.begin();
 }
 
 void loop()
 {
     mqtt.loop();
-    rfidScanner.loop();
-    oledDisplay.loop();
+    entryScanner.loop();
+    exitScanner.loop();
+    entryOled.loop();
+    exitOled.loop();
+    entryServo.loop();
+    exitServo.loop();
 
     if (!wifi.connected())
         return;
