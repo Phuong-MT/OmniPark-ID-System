@@ -128,12 +128,12 @@ export class AuthService {
     };
 
     const accessToken = this.jwtService.sign(payload, {
-      secret: this.configService.get<string>('JWT_SECRET'),
+      secret: this.getRequiredConfig('JWT_SECRET'),
       expiresIn: '15m',
     });
 
     const refreshToken = this.jwtService.sign(payload, {
-      secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
+      secret: this.getRequiredConfig('JWT_REFRESH_SECRET'),
       expiresIn: '7d',
     });
 
@@ -151,12 +151,20 @@ export class AuthService {
     };
 
     const accessToken = this.jwtService.sign(payload, {
-      secret: this.configService.get<string>('JWT_SECRET'),
+      secret: this.getRequiredConfig('JWT_SECRET'),
       expiresIn: '15m',
     });
 
     return {
       accessToken,
     };
+  }
+
+  private getRequiredConfig(key: string): string {
+    const value = this.configService.get<string>(key);
+    if (!value) {
+      throw new Error(`${key} is required`);
+    }
+    return value;
   }
 }

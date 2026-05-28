@@ -24,6 +24,7 @@ services:
       - "8000:8000"
     environment:
       - BACKEND_URL=http://host.docker.internal:3000
+      - EDGE_NODE_ID=edge-default
     depends_on:
       - mediamtx
 

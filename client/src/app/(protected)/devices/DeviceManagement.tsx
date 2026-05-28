@@ -74,10 +74,10 @@ export function DeviceManagement({ currentUserRole }: { currentUserRole: string 
 						value={filters.type || ""}
 					>
 						<option value="">All Types</option>
-						<option value="Gateway">Gateway</option>
-						<option value="Sensor">Sensor</option>
-						<option value="Camera">Camera</option>
-						<option value="Terminal">Terminal</option>
+						<option value="GATE">Gate</option>
+						<option value="SENSOR">Sensor</option>
+						<option value="CAMERA_LRP">Camera LPR</option>
+						<option value="CAMERA_FACE">Camera Face</option>
 					</select>
 
 					{currentUserRole === "SUPER_ADMIN" && (

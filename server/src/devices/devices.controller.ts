@@ -1,4 +1,17 @@
-import { Controller, Logger, Get, Req, Query, UseGuards } from '@nestjs/common';
+import {
+    Body,
+    Controller,
+    Logger,
+    Get,
+    Param,
+    Patch,
+    Post,
+    Req,
+    Query,
+    UseGuards,
+} from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { randomBytes } from 'crypto';
 import { DevicesService } from './devices.service';
 import { MqttSubscribe } from '../mqtt/ mqtt.decorator';
 import { MqttService } from 'src/mqtt/mqtt.service';
@@ -8,6 +21,8 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../user/schema/user.schema';
+import { AssignmentsService } from '../assignments/assignments.service';
+import { CreateCameraDto, UpdateCameraDto } from './dto/camera.dto';
 
 @Controller('devices')
 export class DevicesController {
@@ -16,7 +31,72 @@ export class DevicesController {
     constructor(
         private readonly devicesService: DevicesService,
         private readonly mqttService: MqttService,
+        private readonly assignmentsService: AssignmentsService,
+        private readonly configService: ConfigService,
     ) {}
+
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.POC)
+    @Get('cameras')
+    async findCameras(
+        @Req() req,
+        @Query('page') page: string = '1',
+        @Query('limit') limit: string = '10',
+        @Query('tenantCode') tenantCode?: string,
+        @Query('parkId') parkId?: string,
+        @Query('edgeNodeId') edgeNodeId?: string,
+        @Query('search') search?: string,
+    ) {
+        const user = req.user;
+        const targetTenantCode =
+            user.role === UserRole.SUPER_ADMIN ? tenantCode : user.tenantCode;
+
+        let parkIds: string[] | undefined;
+        if (user.role === UserRole.POC) {
+            const assignments = await this.assignmentsService.getPocAssignments(
+                user.userId,
+            );
+            parkIds = assignments.map((assignment) =>
+                assignment.parkId.toString(),
+            );
+        }
+
+        return this.devicesService.findCameras(
+            { tenantCode: targetTenantCode, parkId, edgeNodeId, search, parkIds },
+            parseInt(page, 10) || 1,
+            parseInt(limit, 10) || 10,
+        );
+    }
+
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+    @Post('cameras')
+    async createCamera(@Req() req, @Body() payload: CreateCameraDto) {
+        const user = req.user;
+        return this.devicesService.createCamera({
+            ...payload,
+            tenantCode:
+                user.role === UserRole.SUPER_ADMIN
+                    ? payload.tenantCode
+                    : user.tenantCode,
+        });
+    }
+
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+    @Patch('cameras/:id')
+    async updateCamera(
+        @Req() req,
+        @Param('id') id: string,
+        @Body() payload: UpdateCameraDto,
+    ) {
+        const user = req.user;
+        return this.devicesService.updateCamera(
+            id,
+            payload,
+            user.role === UserRole.SUPER_ADMIN ? undefined : user.tenantCode,
+        );
+    }
 
     @UseGuards(JwtAuthGuard, RolesGuard)
     @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
@@ -27,6 +107,7 @@ export class DevicesController {
         @Query('limit') limit: string = '10',
         @Query('type') type?: string,
         @Query('tenantCode') tenantCode?: string,
+        @Query('parkId') parkId?: string,
         @Query('search') search?: string,
     ) {
         const user = req.user;
@@ -38,7 +119,7 @@ export class DevicesController {
         const limitNum = parseInt(limit, 10) || 10;
         
         return this.devicesService.findDevices(
-            { tenantCode: targetTenantCode, type, search },
+            { tenantCode: targetTenantCode, type, parkId, search },
             pageNum,
             limitNum
         );
@@ -67,9 +148,12 @@ export class DevicesController {
             subnetMask,
             localIp,
         });
-        //set token
-        //test token
-        const accessToken = 'token';
+        const sessionTtlSeconds =
+            this.configService.get<number>('DEVICE_SESSION_TTL_SECONDS') ||
+            15 * 60;
+        const sessionToken = randomBytes(32).toString('base64url');
+        const sessionTokenExpiresAt =
+            Math.floor(Date.now() / 1000) + sessionTtlSeconds;
         //send ack
         this.logger.log(MQTT_TOPICS.HANDSHAKE_ACK(mac_id));
 
@@ -83,9 +167,8 @@ export class DevicesController {
             tenantCode: device.tenantCode || '',
             status: device.status,
 
-            //test token
-            sessionToken: accessToken,
-            sessionTokenExpiresAt: 1700000000,
+            sessionToken,
+            sessionTokenExpiresAt,
 
             // network info
             hostname: device.hostname,

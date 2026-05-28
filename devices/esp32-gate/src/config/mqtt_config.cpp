@@ -60,7 +60,7 @@ void MqttConfig::reconnect() {
     String clientId = "ESP32_GATE_";
     clientId += String((uint32_t)ESP.getEfuseMac(), HEX);
 
-    String tenantCode = "OMNIPARK_DEMO";
+    String tenantCode = OMNIPARK_TENANT_CODE;
     String lwtTopic = "iot/" + tenantCode + "/GATE/" + clientId + "/status";
     String lwtPayload = "{\"isOnline\": false, \"reason\": \"LWT\"}";
 

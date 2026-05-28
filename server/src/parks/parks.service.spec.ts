@@ -3,6 +3,7 @@ import { ParksService } from './parks.service';
 import { getModelToken } from '@nestjs/mongoose';
 import { Park } from './schema/park.schema';
 import { DBName } from '../utils/connectDB';
+import { Types } from 'mongoose';
 
 describe('ParksService', () => {
     let service: ParksService;
@@ -40,19 +41,26 @@ describe('ParksService', () => {
 
     describe('findParks', () => {
         it('should fetch parks standard flow', async () => {
-            const result = await service.findParks({ tenantCode: 'tenant1' });
+            const tenantCode = new Types.ObjectId().toString();
+            const result = await service.findParks({ tenantCode });
             expect(result.total).toBe(1);
             expect(result.data).toHaveLength(1);
             expect(mockParkModel.find).toHaveBeenCalledWith({
-                tenantCode: 'tenant1',
+                tenantCode: new Types.ObjectId(tenantCode),
             });
         });
 
         it('should apply parkIds filter when provided', async () => {
-            await service.findParks({ parkIds: ['park1', 'park2'] });
+            const parkIds = [
+                new Types.ObjectId().toString(),
+                new Types.ObjectId().toString(),
+            ];
+            await service.findParks({ parkIds });
             expect(mockParkModel.find).toHaveBeenCalledWith(
                 expect.objectContaining({
-                    _id: { $in: ['park1', 'park2'] },
+                    _id: {
+                        $in: parkIds.map((id) => new Types.ObjectId(id)),
+                    },
                 }),
             );
         });

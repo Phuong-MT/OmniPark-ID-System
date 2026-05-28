@@ -1,6 +1,6 @@
 import * as React from "react";
 import { axiosServer } from "@/utils/api/axiosServer";
-import { DeviceManagement } from "./DeviceManagement";
+import { DevicesWorkspace } from "./DevicesWorkspace";
 
 export default async function DevicesPage() {
 	let currentUserRole = "USER";
@@ -21,7 +21,7 @@ export default async function DevicesPage() {
 				</div>
 			</div>
 			
-			<DeviceManagement currentUserRole={currentUserRole} />
+			<DevicesWorkspace currentUserRole={currentUserRole} />
 		</div>
 	);
 }

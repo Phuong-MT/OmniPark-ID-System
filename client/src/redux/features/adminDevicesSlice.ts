@@ -10,6 +10,17 @@ export interface DeviceItem {
     status: string;
     pairState?: string;
     firmwareVersion?: string;
+    parkId?: string;
+    clusterId?: string;
+    cameraConfig?: {
+        streamUrl?: string;
+        streamProtocol?: string;
+        direction?: "IN" | "OUT" | "BOTH";
+        enabled?: boolean;
+        edgeNodeId?: string;
+        aiEnabled?: boolean;
+        lastHealthAt?: string;
+    };
 }
 
 interface AdminDevicesState {

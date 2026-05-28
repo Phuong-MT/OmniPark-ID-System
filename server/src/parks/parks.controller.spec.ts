@@ -73,7 +73,7 @@ describe('ParksController', () => {
                 user: {
                     role: UserRole.POC,
                     tenantCode: 'tenant1',
-                    _id: 'poc1',
+                    userId: 'poc1',
                 },
             };
             mockAssignmentsService.getPocAssignments.mockResolvedValue([

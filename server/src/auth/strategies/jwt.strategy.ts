@@ -3,6 +3,14 @@ import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
 
+function requireConfig(configService: ConfigService, key: string): string {
+    const value = configService.get<string>(key);
+    if (!value) {
+        throw new Error(`${key} is required`);
+    }
+    return value;
+}
+
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     constructor(configService: ConfigService) {
@@ -17,8 +25,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
                 },
             ]),
             ignoreExpiration: false,
-            secretOrKey:
-                configService.get<string>('JWT_SECRET') || 'defaultSecret',
+            secretOrKey: requireConfig(configService, 'JWT_SECRET'),
         });
     }
 

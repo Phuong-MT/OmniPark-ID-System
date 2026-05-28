@@ -2,11 +2,20 @@ import {
     Injectable,
     ConflictException,
     NotFoundException,
+    BadRequestException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { Device, DeviceDocument, DeviceStatus } from './schema/devices.schema';
+import {
+    CameraDirection,
+    CameraStreamProtocol,
+    Device,
+    DeviceDocument,
+    DeviceStatus,
+    DeviceType,
+} from './schema/devices.schema';
 import { DBName } from 'src/utils/connectDB';
+import { CreateCameraDto, EdgeCameraConfig, UpdateCameraDto } from './dto/camera.dto';
 
 @Injectable()
 export class DevicesService {
@@ -56,6 +65,7 @@ export class DevicesService {
             status?: DeviceStatus;
             isOnline?: boolean;
             search?: string;
+            parkId?: string;
         },
         page: number = 1,
         limit: number = 10,
@@ -67,6 +77,9 @@ export class DevicesService {
 
         if (query.type) filter.type = query.type;
         if (query.status) filter.status = query.status;
+        if (query.parkId) {
+            filter.parkId = new Types.ObjectId(query.parkId);
+        }
         
         if (query.search) {
             filter.$or = [
@@ -93,6 +106,236 @@ export class DevicesService {
             page,
             limit,
         };
+    }
+
+    async findCameras(
+        query: {
+            tenantCode?: string;
+            parkId?: string;
+            edgeNodeId?: string;
+            search?: string;
+            parkIds?: string[];
+        },
+        page: number = 1,
+        limit: number = 10,
+    ) {
+        const filter: any = {
+            type: { $in: [DeviceType.CAMERA_LRP, DeviceType.CAMERA_FACE] },
+        };
+
+        if (query.tenantCode) {
+            filter.tenantCode = new Types.ObjectId(query.tenantCode);
+        }
+        if (query.parkId) {
+            filter.parkId = new Types.ObjectId(query.parkId);
+        }
+        if (query.edgeNodeId) {
+            filter['cameraConfig.edgeNodeId'] = query.edgeNodeId;
+        }
+        if (query.parkIds) {
+            if (query.parkId) {
+                filter.parkId = query.parkIds.includes(query.parkId)
+                    ? new Types.ObjectId(query.parkId)
+                    : { $in: [] };
+            } else {
+                filter.parkId = {
+                    $in: query.parkIds.map((id) => new Types.ObjectId(id)),
+                };
+            }
+        }
+        if (query.search) {
+            filter.$or = [
+                { deviceName: { $regex: query.search, $options: 'i' } },
+                { macAddress: { $regex: query.search, $options: 'i' } },
+                { 'cameraConfig.edgeNodeId': { $regex: query.search, $options: 'i' } },
+            ];
+        }
+
+        const skip = (page - 1) * limit;
+        const [data, total] = await Promise.all([
+            this.deviceModel
+                .find(filter)
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit)
+                .lean(),
+            this.deviceModel.countDocuments(filter),
+        ]);
+
+        return { data, total, page, limit };
+    }
+
+    async createCamera(payload: CreateCameraDto & { tenantCode?: string }) {
+        this.assertCameraPayload(payload);
+
+        const macUpper = payload.macAddress.toUpperCase();
+        const exists = await this.deviceModel.exists({ macAddress: macUpper });
+        if (exists) {
+            throw new ConflictException('Camera with this MAC address already exists');
+        }
+
+        return this.deviceModel.create({
+            deviceName: payload.deviceName,
+            macAddress: macUpper,
+            type: payload.type,
+            tenantCode: new Types.ObjectId(payload.tenantCode),
+            parkId: new Types.ObjectId(payload.parkId),
+            clusterId: payload.clusterId
+                ? new Types.ObjectId(payload.clusterId)
+                : undefined,
+            status: DeviceStatus.ACTIVE,
+            hostname: `camera-${macUpper.replace(/:/g, '').toLowerCase()}`,
+            localIp: '0.0.0.0',
+            subnetMask: '255.255.255.0',
+            cameraConfig: {
+                streamUrl: payload.streamUrl,
+                streamProtocol: CameraStreamProtocol.RTSP,
+                direction: payload.direction,
+                enabled: payload.enabled ?? true,
+                edgeNodeId: payload.edgeNodeId,
+                aiEnabled: payload.aiEnabled ?? true,
+            },
+        });
+    }
+
+    async updateCamera(id: string, payload: UpdateCameraDto, tenantCode?: string) {
+        if (!Types.ObjectId.isValid(id)) {
+            throw new BadRequestException('Invalid camera ID format');
+        }
+
+        const update: any = {};
+        if (payload.deviceName !== undefined) update.deviceName = payload.deviceName;
+        if (payload.type !== undefined) {
+            if (!this.isCameraType(payload.type)) {
+                throw new BadRequestException('Invalid camera type');
+            }
+            update.type = payload.type;
+        }
+        if (payload.parkId !== undefined) {
+            if (!Types.ObjectId.isValid(payload.parkId)) {
+                throw new BadRequestException('Invalid park ID format');
+            }
+            update.parkId = new Types.ObjectId(payload.parkId);
+        }
+        if (payload.clusterId !== undefined) {
+            update.clusterId = payload.clusterId
+                ? new Types.ObjectId(payload.clusterId)
+                : undefined;
+        }
+
+        const cameraConfig: Record<string, any> = {};
+        if (payload.streamUrl !== undefined) cameraConfig.streamUrl = payload.streamUrl;
+        if (payload.direction !== undefined) cameraConfig.direction = payload.direction;
+        if (payload.edgeNodeId !== undefined) cameraConfig.edgeNodeId = payload.edgeNodeId;
+        if (payload.enabled !== undefined) cameraConfig.enabled = payload.enabled;
+        if (payload.aiEnabled !== undefined) cameraConfig.aiEnabled = payload.aiEnabled;
+
+        const setPayload: any = { ...update };
+        Object.entries(cameraConfig).forEach(([key, value]) => {
+            setPayload[`cameraConfig.${key}`] = value;
+        });
+
+        const filter: any = {
+            _id: new Types.ObjectId(id),
+            type: { $in: [DeviceType.CAMERA_LRP, DeviceType.CAMERA_FACE] },
+        };
+        if (tenantCode) {
+            filter.tenantCode = new Types.ObjectId(tenantCode);
+        }
+
+        const camera = await this.deviceModel
+            .findOneAndUpdate(
+                filter,
+                { $set: setPayload },
+                { new: true },
+            )
+            .lean();
+
+        if (!camera) {
+            throw new NotFoundException('Camera not found');
+        }
+
+        return camera;
+    }
+
+    async getEdgeCameraConfig(query: {
+        edgeNodeId?: string;
+        parkId?: string;
+    }): Promise<EdgeCameraConfig[]> {
+        const filter: any = {
+            type: { $in: [DeviceType.CAMERA_LRP, DeviceType.CAMERA_FACE] },
+            status: DeviceStatus.ACTIVE,
+            'cameraConfig.enabled': true,
+            'cameraConfig.aiEnabled': true,
+            'cameraConfig.streamUrl': { $exists: true, $ne: '' },
+        };
+
+        if (query.edgeNodeId) {
+            filter['cameraConfig.edgeNodeId'] = query.edgeNodeId;
+        }
+        if (query.parkId) {
+            filter.parkId = new Types.ObjectId(query.parkId);
+        }
+
+        const cameras = await this.deviceModel.find(filter).lean();
+        return cameras.map((camera: any) => ({
+            id: camera._id.toString(),
+            url: camera.cameraConfig.streamUrl,
+            direction: camera.cameraConfig.direction || CameraDirection.BOTH,
+            parkId: camera.parkId?.toString(),
+            clusterId: camera.clusterId?.toString(),
+            type: camera.type,
+        }));
+    }
+
+    async validateEdgeCameraEvent(cameraId: string) {
+        if (!Types.ObjectId.isValid(cameraId)) {
+            throw new BadRequestException('Invalid camera ID format');
+        }
+
+        const camera = await this.deviceModel
+            .findOne({
+                _id: new Types.ObjectId(cameraId),
+                type: { $in: [DeviceType.CAMERA_LRP, DeviceType.CAMERA_FACE] },
+                status: DeviceStatus.ACTIVE,
+                'cameraConfig.enabled': true,
+            })
+            .lean();
+
+        if (!camera) {
+            throw new NotFoundException('Camera not found or inactive');
+        }
+
+        await this.deviceModel.updateOne(
+            { _id: camera._id },
+            { $set: { 'cameraConfig.lastHealthAt': new Date() } },
+        );
+
+        return camera;
+    }
+
+    private assertCameraPayload(payload: CreateCameraDto & { tenantCode?: string }) {
+        if (!this.isCameraType(payload.type)) {
+            throw new BadRequestException('Invalid camera type');
+        }
+        if (!Types.ObjectId.isValid(payload.tenantCode)) {
+            throw new BadRequestException('Invalid tenant ID format');
+        }
+        if (!Types.ObjectId.isValid(payload.parkId)) {
+            throw new BadRequestException('Invalid park ID format');
+        }
+        if (payload.clusterId && !Types.ObjectId.isValid(payload.clusterId)) {
+            throw new BadRequestException('Invalid cluster ID format');
+        }
+        if (!payload.streamUrl?.startsWith('rtsp://')) {
+            throw new BadRequestException('RTSP stream URL is required');
+        }
+    }
+
+    private isCameraType(type: string) {
+        return [DeviceType.CAMERA_LRP, DeviceType.CAMERA_FACE].includes(
+            type as DeviceType,
+        );
     }
 
     // =========================

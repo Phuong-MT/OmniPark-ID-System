@@ -5,6 +5,7 @@ import { forwardRef, Module } from '@nestjs/common';
 import { DevicesService } from './devices.service';
 import { DevicesController } from './devices.controller';
 import { MqttModule } from 'src/mqtt/mqtt.module';
+import { AssignmentsModule } from '../assignments/assignments.module';
 
 @Module({
     imports: [
@@ -13,6 +14,7 @@ import { MqttModule } from 'src/mqtt/mqtt.module';
             DBName.omniparkIDSystem,
         ),
         forwardRef(() => MqttModule),
+        AssignmentsModule,
     ],
     controllers: [DevicesController],
     providers: [DevicesService],

@@ -22,6 +22,16 @@ export enum DevicePairState {
     PAIRED = 'PAIRED',
 }
 
+export enum CameraStreamProtocol {
+    RTSP = 'RTSP',
+}
+
+export enum CameraDirection {
+    IN = 'IN',
+    OUT = 'OUT',
+    BOTH = 'BOTH',
+}
+
 @Schema({
     timestamps: true,
     collection: 'devices',
@@ -93,12 +103,47 @@ export class Device {
     pairTokenExpiresAt?: Date;
 
     // Parks Clusters embeded
-    @Prop({type:Types.ObjectId})
-    clusterId?: Types.ObjectId
+    @Prop({ type: Types.ObjectId, ref: 'Park', index: true })
+    parkId?: Types.ObjectId;
+
+    @Prop({ type: Types.ObjectId })
+    clusterId?: Types.ObjectId;
+
+    @Prop({
+        type: {
+            streamUrl: String,
+            streamProtocol: {
+                type: String,
+                enum: CameraStreamProtocol,
+                default: CameraStreamProtocol.RTSP,
+            },
+            direction: {
+                type: String,
+                enum: CameraDirection,
+                default: CameraDirection.BOTH,
+            },
+            enabled: { type: Boolean, default: true },
+            edgeNodeId: String,
+            aiEnabled: { type: Boolean, default: true },
+            lastHealthAt: Date,
+        },
+        default: undefined,
+    })
+    cameraConfig?: {
+        streamUrl?: string;
+        streamProtocol?: CameraStreamProtocol;
+        direction?: CameraDirection;
+        enabled?: boolean;
+        edgeNodeId?: string;
+        aiEnabled?: boolean;
+        lastHealthAt?: Date;
+    };
 }
 
 export const DeviceSchema = SchemaFactory.createForClass(Device);
 
 DeviceSchema.index({ tenantCode: 1, type: 1 });
 DeviceSchema.index({ tenantCode: 1, status: 1 });
+DeviceSchema.index({ tenantCode: 1, parkId: 1, type: 1 });
+DeviceSchema.index({ 'cameraConfig.edgeNodeId': 1, status: 1 });
 DeviceSchema.index({ pairToken: 1 }, { unique: true, sparse: true });

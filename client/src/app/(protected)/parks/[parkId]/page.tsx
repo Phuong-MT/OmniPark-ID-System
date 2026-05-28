@@ -1,7 +1,7 @@
 import * as React from "react";
 import { axiosServer } from "@/utils/api/axiosServer";
 import Link from "next/link";
-import { ArrowLeft, MapPin, Clock } from "lucide-react";
+import { ArrowLeft, MapPin, Clock, Camera } from "lucide-react";
 
 export async function generateMetadata({ params }: { params: Promise<{ parkId: string }> }) {
 	const resolvedParams = await params;
@@ -14,10 +14,15 @@ export async function generateMetadata({ params }: { params: Promise<{ parkId: s
 export default async function ParkDetailPage({ params }: { params: Promise<{ parkId: string }> }) {
 	const resolvedParams = await params;
 	let park = null;
+	let cameras: any[] = [];
 	let error = null;
 	try {
 		const res = await axiosServer.get(`/parks/${resolvedParams.parkId}`);		
 		park = res.data;
+		const camerasRes = await axiosServer.get(
+			`/devices/cameras?parkId=${resolvedParams.parkId}&page=1&limit=50`,
+		);
+		cameras = camerasRes.data.data || [];
 	} catch (err: any) {
 		error = err.response?.data?.message || "Failed to load park details";
 	}
@@ -95,6 +100,42 @@ export default async function ParkDetailPage({ params }: { params: Promise<{ par
 							</p>
 						</div>
 					</div>
+				</div>
+			</div>
+
+			<div className="rounded-xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-950 p-6">
+				<div className="mb-4 flex items-center justify-between">
+					<h2 className="flex items-center gap-2 text-lg font-semibold text-zinc-950 dark:text-zinc-50">
+						<Camera className="h-5 w-5" />
+						Cameras
+					</h2>
+					<span className="text-sm text-zinc-500">{cameras.length} configured</span>
+				</div>
+				<div className="divide-y divide-zinc-100 dark:divide-zinc-800">
+					{cameras.map((camera) => (
+						<div
+							key={camera._id}
+							className="grid gap-2 py-3 text-sm md:grid-cols-[minmax(0,1fr)_120px_160px]"
+						>
+							<div>
+								<div className="font-medium text-zinc-950 dark:text-zinc-50">
+									{camera.deviceName}
+								</div>
+								<div className="text-xs text-zinc-500">{camera.macAddress}</div>
+							</div>
+							<div className="text-zinc-600 dark:text-zinc-300">
+								{camera.cameraConfig?.direction || "BOTH"}
+							</div>
+							<div className="text-zinc-600 dark:text-zinc-300">
+								{camera.cameraConfig?.enabled ? "Enabled" : "Disabled"}
+							</div>
+						</div>
+					))}
+					{cameras.length === 0 && (
+						<div className="py-6 text-center text-sm text-zinc-500">
+							No cameras assigned to this park.
+						</div>
+					)}
 				</div>
 			</div>
 		</div>

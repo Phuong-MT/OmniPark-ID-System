@@ -6,6 +6,7 @@ interface FetchDevicesParams {
     limit: number;
     type?: string;
     tenantCode?: string;
+    parkId?: string;
     search?: string;
 }
 
@@ -13,13 +14,14 @@ export const fetchDevicesList = createAsyncThunk(
     "adminDevices/fetchDevicesList",
     async (params: FetchDevicesParams, { rejectWithValue, signal }) => {
         try {
-            const { page, limit, type, tenantCode, search } = params;
+            const { page, limit, type, tenantCode, parkId, search } = params;
             const queryParams = new URLSearchParams({
                 page: page.toString(),
                 limit: limit.toString(),
             });
             if (type) queryParams.append("type", type);
             if (tenantCode) queryParams.append("tenantCode", tenantCode);
+            if (parkId) queryParams.append("parkId", parkId);
             if (search) queryParams.append("search", search);
 
             const response = await api.get(`/devices?${queryParams.toString()}`, { signal });

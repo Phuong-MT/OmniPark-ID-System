@@ -11,6 +11,7 @@
 #include "display/OledDisplay.h"
 #include "servo/GateServo.h"
 #include "_core/gate_type.h"
+#include "secrets.h"
 
 using namespace std;
 
@@ -27,7 +28,7 @@ HandshakeManager hs(clientId.c_str(), macStr.c_str());
 
 PairingHandler pairing(
     mqtt, "GATE",
-    "OMNIPARK_DEMO"); // Hardcoded tenant for now, should come from config
+    OMNIPARK_TENANT_CODE);
 
 String lastCartId = "";
 
@@ -36,14 +37,17 @@ String lastCartId = "";
 #define RST_PIN      21
 #define I2C_SDA_PIN  17
 #define I2C_SCL_PIN  16
+#define I2C_EXIT_SDA_PIN  14
+#define I2C_EXIT_SCL_PIN  13
 #define SERVO_PIN_ENTRY 25
 #define SERVO_PIN_EXIT  26
 
 RFIDScanner entryScanner(GateType::ENTRY, SS_PIN_ENTRY, RST_PIN);
 RFIDScanner exitScanner(GateType::EXIT, SS_PIN_EXIT, RST_PIN);
 
+TwoWire exitWire = TwoWire(1);
 OledDisplay entryOled(GateType::ENTRY, &Wire, 0x3C);
-OledDisplay exitOled(GateType::EXIT, &Wire, 0x3D);
+OledDisplay exitOled(GateType::EXIT, &exitWire, 0x3C);
 
 GateServo entryServo(GateType::ENTRY, SERVO_PIN_ENTRY);
 GateServo exitServo(GateType::EXIT, SERVO_PIN_EXIT);
@@ -144,6 +148,7 @@ void setup()
 
     SPI.begin(18, 19, 23); // SCK, MISO, MOSI
     Wire.begin(I2C_SDA_PIN, I2C_SCL_PIN);
+    exitWire.begin(I2C_EXIT_SDA_PIN, I2C_EXIT_SCL_PIN);
 
     entryOled.begin();
     exitOled.begin();

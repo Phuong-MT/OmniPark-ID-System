@@ -6,6 +6,7 @@ from src.models.event import EdgeEvent
 logger = logging.getLogger(__name__)
 
 BACKEND_URL = os.getenv("BACKEND_URL", "http://host.docker.internal:3000")
+EDGE_NODE_ID = os.getenv("EDGE_NODE_ID")
 
 async def forward_event_to_backend(event: EdgeEvent):
     """
@@ -13,8 +14,7 @@ async def forward_event_to_backend(event: EdgeEvent):
     """
     try:
         async with httpx.AsyncClient() as client:
-            # We assume the NestJS backend has an endpoint /api/edge/events
-            url = f"{BACKEND_URL}/api/edge/events"
+            url = f"{BACKEND_URL}/edge/events"
             response = await client.post(
                 url,
                 json=event.model_dump(mode="json"),
@@ -35,8 +35,9 @@ async def fetch_cameras_config() -> list:
     """
     try:
         async with httpx.AsyncClient() as client:
-            url = f"{BACKEND_URL}/api/edge/config/cameras"
-            response = await client.get(url, timeout=10.0)
+            url = f"{BACKEND_URL}/edge/config/cameras"
+            params = {"edgeNodeId": EDGE_NODE_ID} if EDGE_NODE_ID else None
+            response = await client.get(url, params=params, timeout=10.0)
             response.raise_for_status()
             config = response.json()
             logger.info(f"Successfully fetched {len(config)} cameras configuration from backend.")

@@ -35,8 +35,12 @@ describe('AssignmentsController', () => {
 
     describe('assignPark', () => {
         it('should assign a park correctly', async () => {
-            const req = { user: { tenantCode: 'tenant1', _id: 'admin1' } };
-            const body = { pocId: 'poc1', parkId: 'park1' };
+            const schedule = {
+                startTime: new Date('2026-01-01T00:00:00.000Z'),
+                endTime: new Date('2026-01-31T23:59:59.000Z'),
+            };
+            const req = { user: { tenantCode: 'tenant1', userId: 'admin1' } };
+            const body = { pocId: 'poc1', parkId: 'park1', schedule };
             mockAssignmentsService.assignPark.mockResolvedValue({
                 _id: 'assignment1',
             });
@@ -48,12 +52,12 @@ describe('AssignmentsController', () => {
                 assignedBy: 'admin1',
                 pocId: 'poc1',
                 parkId: 'park1',
-                schedule: undefined,
+                schedule,
             });
         });
 
         it('should throw HttpException if pocId or parkId omitted', async () => {
-            const req = { user: { tenantCode: 'tenant1', _id: 'admin1' } };
+            const req = { user: { tenantCode: 'tenant1', userId: 'admin1' } };
             const body = { pocId: 'poc1', parkId: '' };
 
             await expect(controller.assignPark(req, body)).rejects.toThrow(
