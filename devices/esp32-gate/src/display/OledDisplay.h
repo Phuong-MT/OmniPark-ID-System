@@ -4,7 +4,7 @@
 #include <Arduino.h>
 #include <Wire.h>
 #include <Adafruit_GFX.h>
-#include <Adafruit_SSD1306.h>
+#include <Adafruit_SH110X.h>
 #include "../_core/gate_type.h"
 
 class OledDisplay {
@@ -24,7 +24,7 @@ private:
     GateType _gateType;
     TwoWire* _wireBus;
     uint8_t _address;
-    Adafruit_SSD1306 _display;
+    Adafruit_SH1106G _display;
     unsigned long _displayClearMs;
 };
 

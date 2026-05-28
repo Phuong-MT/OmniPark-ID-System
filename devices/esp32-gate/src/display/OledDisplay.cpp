@@ -7,9 +7,9 @@ OledDisplay::OledDisplay(GateType type, TwoWire* wireBus, uint8_t address, uint8
 
 bool OledDisplay::begin()
 {
-    if (!_display.begin(SSD1306_SWITCHCAPVCC, _address))
+    if (!_display.begin(_address, true))
     {
-        Serial.println(F("SSD1306 allocation failed"));
+        Serial.println(F("SH1106 allocation failed"));
         return false;
     }
     showIdle();
@@ -33,7 +33,7 @@ void OledDisplay::showMessage(const String &msg, uint8_t textSize, bool clearScr
         _display.setCursor(0, 0);
     }
     _display.setTextSize(textSize);
-    _display.setTextColor(SSD1306_WHITE);
+    _display.setTextColor(SH110X_WHITE);
     _display.println(msg);
     _display.display();
 }
@@ -57,7 +57,7 @@ void OledDisplay::showGreeting(const String &cardId)
     _display.clearDisplay();
     _display.setCursor(0, 0);
     _display.setTextSize(2);
-    _display.setTextColor(SSD1306_WHITE);
+    _display.setTextColor(SH110X_WHITE);
     _display.println("WELLCOME");
 
     _display.setTextSize(2);
