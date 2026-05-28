@@ -1,6 +1,6 @@
 #include "OledDisplay.h"
 
-OledDisplay::OledDisplay(GateType type, TwoWire* wireBus, uint8_t address, uint8_t width, uint8_t height)
+OledDisplay::OledDisplay(GateType type, TwoWire *wireBus, uint8_t address, uint8_t width, uint8_t height)
     : _gateType(type), _wireBus(wireBus), _address(address), _display(width, height, wireBus, -1), _displayClearMs(0)
 {
 }
@@ -25,43 +25,78 @@ void OledDisplay::loop()
     }
 }
 
+void OledDisplay::drawHeader(const String &title)
+{
+    _display.fillRect(0, 0, 128, 16, SH110X_WHITE);
+    _display.setTextSize(1);
+    _display.setTextColor(SH110X_BLACK);
+
+    int16_t x1, y1;
+    uint16_t w, h;
+    _display.getTextBounds(title, 0, 0, &x1, &y1, &w, &h);
+    _display.setCursor((128 - w) / 2, 4);
+    _display.print(title);
+
+    _display.setTextColor(SH110X_WHITE);
+}
+
+void OledDisplay::centerText(const String &text, int16_t y, uint8_t textSize)
+{
+    _display.setTextSize(textSize);
+    int16_t x1, y1;
+    uint16_t w, h;
+    _display.getTextBounds(text, 0, 0, &x1, &y1, &w, &h);
+    _display.setCursor((128 - w) / 2, y);
+    _display.print(text);
+}
+
 void OledDisplay::showMessage(const String &msg, uint8_t textSize, bool clearScreen)
 {
     if (clearScreen)
     {
         _display.clearDisplay();
-        _display.setCursor(0, 0);
+        String gateName = (_gateType == GateType::ENTRY) ? "ENTRY GATE" : "EXIT GATE";
+        drawHeader(gateName);
     }
-    _display.setTextSize(textSize);
-    _display.setTextColor(SH110X_WHITE);
-    _display.println(msg);
+
+    centerText(msg, 32, textSize);
     _display.display();
 }
 
 void OledDisplay::showIdle()
 {
-    showMessage("Waiting...", 2, true);
+    _display.clearDisplay();
+    String gateName = (_gateType == GateType::ENTRY) ? "ENTRY GATE" : "EXIT GATE";
+    drawHeader(gateName);
+
+    centerText("Ready...", 26, 2);
+    centerText("Please scan card", 48, 1);
+
+    _display.display();
 }
 
 void OledDisplay::showError()
 {
-    showMessage("ERROR!", 2);
+    _display.clearDisplay();
+    drawHeader("ACCESS DENIED");
+
+    centerText("INVALID", 25, 2);
+    centerText("CARD", 45, 2);
+
+    _display.display();
     _displayClearMs = millis() + 3000;
 }
 
 void OledDisplay::showGreeting(const String &cardId)
 {
-    String gateName = (_gateType == GateType::ENTRY) ? "ENTRY" : "EXIT";
+    String gateName = (_gateType == GateType::ENTRY) ? "ENTRY GATE" : "EXIT GATE";
     Serial.println("[" + gateName + "] OLED: showing greeting for " + cardId);
 
     _display.clearDisplay();
-    _display.setCursor(0, 0);
-    _display.setTextSize(2);
-    _display.setTextColor(SH110X_WHITE);
-    _display.println("WELLCOME");
+    drawHeader("OMNIPARK");
 
-    _display.setTextSize(2);
-    _display.println(cardId);
+    centerText("WELCOME", 25, 2);
+    centerText("ID: " + cardId, 48, 1);
 
     _display.display();
 

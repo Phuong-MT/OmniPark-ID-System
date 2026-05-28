@@ -32,18 +32,24 @@ PairingHandler pairing(
 String lastCartId = "";
 
 #define SS_PIN_ENTRY 5
-#define SS_PIN_EXIT  4
-#define RST_PIN      21
-#define I2C_SDA_PIN  17
-#define I2C_SCL_PIN  16
+#define SS_PIN_EXIT 4
+#define RST_PIN 21
+#define I2C_SDA_PIN_ENTRY 17
+#define I2C_SCL_PIN_ENTRY 16
+
+// Cấu hình chân I2C cho OLED Exit (Hãy đổi lại cho đúng với phần cứng của bạn)
+#define I2C_SDA_PIN_EXIT 14
+#define I2C_SCL_PIN_EXIT 13
+
 #define SERVO_PIN_ENTRY 25
-#define SERVO_PIN_EXIT  26
+#define SERVO_PIN_EXIT 26
 
 RFIDScanner entryScanner(GateType::ENTRY, SS_PIN_ENTRY, RST_PIN);
 RFIDScanner exitScanner(GateType::EXIT, SS_PIN_EXIT, RST_PIN);
 
 OledDisplay entryOled(GateType::ENTRY, &Wire, 0x3C);
-OledDisplay exitOled(GateType::EXIT, &Wire, 0x3D);
+// Khởi tạo exitOled dùng Wire1, địa chỉ thường là 0x3C nếu nó khác bus I2C với entryOled
+OledDisplay exitOled(GateType::EXIT, &Wire1, 0x3C);
 
 GateServo entryServo(GateType::ENTRY, SERVO_PIN_ENTRY);
 GateServo exitServo(GateType::EXIT, SERVO_PIN_EXIT);
@@ -51,14 +57,15 @@ GateServo exitServo(GateType::EXIT, SERVO_PIN_EXIT);
 void onCardScanned(GateType type, const String &cardId, bool isError)
 {
     String gateName = (type == GateType::ENTRY) ? "ENTRY" : "EXIT";
-    OledDisplay& targetOled = (type == GateType::ENTRY) ? entryOled : exitOled;
-    GateServo& targetServo = (type == GateType::ENTRY) ? entryServo : exitServo;
+    OledDisplay &targetOled = (type == GateType::ENTRY) ? entryOled : exitOled;
+    GateServo &targetServo = (type == GateType::ENTRY) ? entryServo : exitServo;
 
-    if (isError) {
+    if (isError)
+    {
         targetOled.showError();
         return;
     }
-    
+
     targetOled.showGreeting(cardId);
     targetServo.open();
 
@@ -143,7 +150,8 @@ void setup()
     mqtt.begin();
 
     SPI.begin(18, 19, 23); // SCK, MISO, MOSI
-    Wire.begin(I2C_SDA_PIN, I2C_SCL_PIN);
+    Wire.begin(I2C_SDA_PIN_ENTRY, I2C_SCL_PIN_ENTRY);
+    Wire1.begin(I2C_SDA_PIN_EXIT, I2C_SCL_PIN_EXIT);
 
     entryOled.begin();
     exitOled.begin();
@@ -187,14 +195,7 @@ void loop()
 
         lastHandshakeMs = now;
         return;
-    }
-
-    // if (!pairing.isPaired() && hs.hasValidSession(time(nullptr)) &&
-    // deviceInfo.getPairing() == DevicePairState::PAIRING){
-    //   pairing.loop();
-    //   return;
-    // }
-
+    };
     // Heartbeat after handshake
     if (hs.hasValidSession(std::time(nullptr)) &&
         now - lastHeartbeatMs > HEARTBEAT_INTERVALS[currentHeartbeatIndex])
@@ -212,5 +213,7 @@ void loop()
 
         lastHeartbeatMs = now;
         currentHeartbeatIndex = (currentHeartbeatIndex + 1) % 3;
-    }
+    };
+
+    // pair devices
 }
