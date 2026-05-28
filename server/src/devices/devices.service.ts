@@ -2,17 +2,26 @@ import {
     Injectable,
     ConflictException,
     NotFoundException,
+    Inject,
+    forwardRef,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { Device, DeviceDocument, DeviceStatus } from './schema/devices.schema';
+import { Device, DeviceDocument, DeviceStatus, DevicePairState } from './schema/devices.schema';
 import { DBName } from 'src/utils/connectDB';
+import { Park, ParkDocument } from 'src/parks/schema/park.schema';
+import { MqttService } from 'src/mqtt/mqtt.service';
+import { DevicesGateway } from './devices.gateway';
 
 @Injectable()
 export class DevicesService {
     constructor(
         @InjectModel(Device.name, DBName.omniparkIDSystem)
         private readonly deviceModel: Model<DeviceDocument>,
+        @InjectModel(Park.name, DBName.omniparkIDSystem)
+        private readonly parkModel: Model<ParkDocument>,
+        @Inject(forwardRef(() => MqttService))
+        private readonly mqttService: MqttService,
     ) {}
 
     // =========================
@@ -273,5 +282,122 @@ export class DevicesService {
         } catch (error) {
             return false;
         }
+    }
+
+    private gateway: DevicesGateway;
+
+    registerGateway(gateway: DevicesGateway) {
+        this.gateway = gateway;
+    }
+
+    async registerPairRequest(mac: string, sectionId: string, type: string) {
+        const macUpper = mac.toUpperCase();
+        const pairTokenExpiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+
+        await this.deviceModel.findOneAndUpdate(
+            { macAddress: macUpper },
+            {
+                $setOnInsert: {
+                    macAddress: macUpper,
+                    type: type,
+                    status: DeviceStatus.INACTIVE,
+                    deviceName: `NEW_${type}_${macUpper.slice(-5)}`,
+                    hostname: `omnipark-${macUpper.replace(/:/g, '').toLowerCase()}`,
+                    localIp: '0.0.0.0',
+                    subnetMask: '255.255.255.0',
+                },
+                $set: {
+                    pairToken: sectionId,
+                    pairTokenExpiresAt,
+                    pairState: DevicePairState.PAIRING,
+                    lastSeenAt: new Date(),
+                },
+            },
+            {
+                upsert: true,
+                new: true,
+            },
+        );
+    }
+
+    async getPairingDevices() {
+        return this.deviceModel
+            .find({
+                pairState: DevicePairState.PAIRING,
+                pairTokenExpiresAt: { $gt: new Date() },
+            })
+            .lean();
+    }
+
+    async initiatePairConfirm(
+        macAddress: string,
+        objectId: string,
+        sectionId: string,
+    ) {
+        const device = await this.deviceModel.findOne({
+            macAddress: macAddress.toUpperCase(),
+            pairState: DevicePairState.PAIRING,
+            pairToken: sectionId,
+            pairTokenExpiresAt: { $gt: new Date() },
+        });
+
+        if (!device) {
+            throw new NotFoundException(
+                'Device not found or not in pairing state, or session expired',
+            );
+        }
+
+        const confirmTopic = `iot/device/${macAddress.toUpperCase()}/pair-confirm`;
+        const payload = {
+            objectId: objectId,
+            token: sectionId,
+        };
+        this.mqttService.publish(confirmTopic, payload);
+    }
+
+    async confirmPair(mac: string, objectId: string, token: string) {
+        const device = await this.deviceModel.findOne({
+            macAddress: mac.toUpperCase(),
+            pairState: DevicePairState.PAIRING,
+            pairToken: token,
+            pairTokenExpiresAt: { $gt: new Date() },
+        });
+
+        if (!device) {
+            throw new NotFoundException('Device not found, expired, or invalid token');
+        }
+
+        let tenantCode = device.tenantCode;
+        if (Types.ObjectId.isValid(objectId)) {
+            const park = await this.parkModel.findOne({
+                'clusters._id': new Types.ObjectId(objectId),
+            });
+            if (park) {
+                tenantCode = park.tenantCode;
+            }
+        }
+
+        device.pairState = DevicePairState.PAIRED;
+        device.status = DeviceStatus.ACTIVE;
+        device.clusterId = new Types.ObjectId(objectId);
+        if (tenantCode) {
+            device.tenantCode = tenantCode;
+        }
+        device.pairToken = undefined;
+        device.pairTokenExpiresAt = undefined;
+        device.lastSeenAt = new Date();
+
+        await device.save();
+
+        if (this.gateway) {
+            this.gateway.notifyPairSuccess(device.macAddress, device);
+        }
+
+        return {
+            status: 'success',
+            deviceId: device._id,
+            deviceName: device.deviceName,
+            tenantCode: device.tenantCode,
+        };
     }
 }

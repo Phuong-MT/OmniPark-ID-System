@@ -1,16 +1,16 @@
 #include "_core/device_info.h"
+#include "_core/gate_type.h"
 #include "config/mqtt_config.h"
 #include "config/wifi_config.h"
+#include "display/OledDisplay.h"
 #include "handshake/handshake.h"
 #include "pairManager/pairManager.h"
 #include "rfid/RFIDScanner.h"
+#include "servo/GateServo.h"
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <ctime>
 #include <string>
-#include "display/OledDisplay.h"
-#include "servo/GateServo.h"
-#include "_core/gate_type.h"
 
 using namespace std;
 
@@ -20,14 +20,6 @@ WifiConfig wifi;
 WiFiClient net;
 MqttConfig mqtt(net);
 DeviceInfo &deviceInfo = DeviceInfo::getInstance();
-
-String clientId = "ESP32_GATE_" + String((uint32_t)ESP.getEfuseMac(), HEX);
-String macStr = String((uint32_t)ESP.getEfuseMac(), HEX);
-HandshakeManager hs(clientId.c_str(), macStr.c_str());
-
-PairingHandler pairing(
-    mqtt, "GATE",
-    "OMNIPARK_DEMO"); // Hardcoded tenant for now, should come from config
 
 String lastCartId = "";
 
@@ -48,40 +40,45 @@ RFIDScanner entryScanner(GateType::ENTRY, SS_PIN_ENTRY, RST_PIN);
 RFIDScanner exitScanner(GateType::EXIT, SS_PIN_EXIT, RST_PIN);
 
 OledDisplay entryOled(GateType::ENTRY, &Wire, 0x3C);
-// Khởi tạo exitOled dùng Wire1, địa chỉ thường là 0x3C nếu nó khác bus I2C với entryOled
+// Khởi tạo exitOled dùng Wire1, địa chỉ thường là 0x3C nếu nó khác bus I2C với
+// entryOled
 OledDisplay exitOled(GateType::EXIT, &Wire1, 0x3C);
 
 GateServo entryServo(GateType::ENTRY, SERVO_PIN_ENTRY);
 GateServo exitServo(GateType::EXIT, SERVO_PIN_EXIT);
 
-void onCardScanned(GateType type, const String &cardId, bool isError)
-{
-    String gateName = (type == GateType::ENTRY) ? "ENTRY" : "EXIT";
-    OledDisplay &targetOled = (type == GateType::ENTRY) ? entryOled : exitOled;
-    GateServo &targetServo = (type == GateType::ENTRY) ? entryServo : exitServo;
+String clientId = "ESP32_GATE_" + String((uint32_t)ESP.getEfuseMac(), HEX);
+String macStr = String((uint32_t)ESP.getEfuseMac(), HEX);
+HandshakeManager hs(clientId.c_str(), macStr.c_str());
 
-    if (isError)
-    {
-        targetOled.showError();
-        return;
-    }
+PairingHandler pairing(mqtt, "GATE", entryOled, exitOled);
 
-    targetOled.showGreeting(cardId);
-    targetServo.open();
+void onCardScanned(GateType type, const String &cardId, bool isError) {
+  String gateName = (type == GateType::ENTRY) ? "ENTRY" : "EXIT";
+  OledDisplay &targetOled = (type == GateType::ENTRY) ? entryOled : exitOled;
+  GateServo &targetServo = (type == GateType::ENTRY) ? entryServo : exitServo;
 
-    Serial.println("[" + gateName + "] Card scanned: " + cardId);
+  if (isError) {
+    targetOled.showError();
+    return;
+  }
 
-    StaticJsonDocument<128> doc;
-    doc["mac"] = macStr.c_str();
-    doc["card_id"] = cardId.c_str();
-    doc["gate"] = gateName.c_str();
-    doc["timestamp"] = std::time(nullptr);
+  targetOled.showGreeting(cardId);
+  targetServo.open();
 
-    char buffer[128];
-    serializeJson(doc, buffer);
-    Serial.println(buffer);
-    String topic = "iot/gate/" + macStr + "/rfid";
-    mqtt.publish(topic.c_str(), buffer);
+  Serial.println("[" + gateName + "] Card scanned: " + cardId);
+
+  StaticJsonDocument<128> doc;
+  doc["mac"] = macStr.c_str();
+  doc["card_id"] = cardId.c_str();
+  doc["gate"] = gateName.c_str();
+  doc["timestamp"] = std::time(nullptr);
+
+  char buffer[128];
+  serializeJson(doc, buffer);
+  Serial.println(buffer);
+  String topic = "iot/gate/" + macStr + "/rfid";
+  mqtt.publish(topic.c_str(), buffer);
 }
 
 unsigned long lastHandshakeMs = 0;
@@ -92,128 +89,124 @@ const unsigned long HEARTBEAT_INTERVALS[] = {60000, 120000,
                                              300000}; // 1m, 2m, 5m
 int currentHeartbeatIndex = 0;
 
-void setup()
-{
-    Serial.begin(115200);
-    Serial.println("ESP32 Gate Controller Booting...");
-    Serial.println("Client ID: " + clientId);
+void setup() {
+  Serial.begin(115200);
+  Serial.println("ESP32 Gate Controller Booting...");
+  Serial.println("Client ID: " + clientId);
 
-    pinMode(LED_PIN, OUTPUT);
+  pinMode(LED_PIN, OUTPUT);
 
-    delay(1000);
-    wifi.begin();
-    while (!wifi.connected())
-    {
-        Serial.println("Waiting for WiFi connection...");
-        delay(2000);
-    }
-    NetworkInfo net = wifi.get();
+  delay(1000);
+  wifi.begin();
+  while (!wifi.connected()) {
+    Serial.println("Waiting for WiFi connection...");
+    delay(2000);
+  }
+  NetworkInfo net = wifi.get();
 
-    if (!net.connected)
-    {
-        Serial.println("WiFi not connected!");
-        return;
-    };
+  if (!net.connected) {
+    Serial.println("WiFi not connected!");
+    return;
+  };
 
-    Serial.println("WiFi Connected!");
-    Serial.print("SSID: ");
-    Serial.println(net.ssid);
-    Serial.print("BSSID: ");
-    Serial.println(net.bssid);
-    Serial.print("IP Address: ");
-    Serial.println(net.ip);
-    Serial.print("Gateway: ");
-    Serial.println(net.gateway);
-    Serial.print("RSSI: ");
-    Serial.println(net.rssi);
+  Serial.println("WiFi Connected!");
+  Serial.print("SSID: ");
+  Serial.println(net.ssid);
+  Serial.print("BSSID: ");
+  Serial.println(net.bssid);
+  Serial.print("IP Address: ");
+  Serial.println(net.ip);
+  Serial.print("Gateway: ");
+  Serial.println(net.gateway);
+  Serial.print("RSSI: ");
+  Serial.println(net.rssi);
 
-    Serial.println("Setup wifi completed.");
+  Serial.println("Setup wifi completed.");
 
-    // register handle callback message broker
-    mqtt.registerHandler(
-        HANDSHAKE_TOPIC_RESPONSE(macStr.c_str()).c_str(),
-        [&](const char *, const uint8_t *payload, unsigned int length)
-        {
-            Serial.println("Handshake ack");
-            string msg((char *)payload, length);
-            if (hs.handleResponsePayload(msg))
-            {
-                Serial.println("[HS] Handshake OK");
-            }
-            else
-            {
-                Serial.println("[HS] Handshake Failed");
-            }
-        });
+  // register handle callback message broker
+  mqtt.registerHandler(
+      HANDSHAKE_TOPIC_RESPONSE(macStr.c_str()).c_str(),
+      [&](const char *, const uint8_t *payload, unsigned int length) {
+        Serial.println("Handshake ack");
+        string msg((char *)payload, length);
+        if (hs.handleResponsePayload(msg)) {
+          Serial.println("[HS] Handshake OK");
+        } else {
+          Serial.println("[HS] Handshake Failed");
+        }
+      });
 
-    // pairing.begin();
-    mqtt.begin();
+  randomSeed(ESP.getCycleCount());
+  pairing.begin();
+  mqtt.begin();
 
-    SPI.begin(18, 19, 23); // SCK, MISO, MOSI
-    Wire.begin(I2C_SDA_PIN_ENTRY, I2C_SCL_PIN_ENTRY);
-    Wire1.begin(I2C_SDA_PIN_EXIT, I2C_SCL_PIN_EXIT);
+  SPI.begin(18, 19, 23); // SCK, MISO, MOSI
+  Wire.begin(I2C_SDA_PIN_ENTRY, I2C_SCL_PIN_ENTRY);
+  Wire1.begin(I2C_SDA_PIN_EXIT, I2C_SCL_PIN_EXIT);
 
-    entryOled.begin();
-    exitOled.begin();
+  entryOled.begin();
+  exitOled.begin();
 
-    entryScanner.setCallback(onCardScanned);
-    entryScanner.begin();
+  entryScanner.setCallback(onCardScanned);
+  entryScanner.begin();
 
-    exitScanner.setCallback(onCardScanned);
-    exitScanner.begin();
+  exitScanner.setCallback(onCardScanned);
+  exitScanner.begin();
 
-    entryServo.begin();
-    exitServo.begin();
+  entryServo.begin();
+  exitServo.begin();
 }
 
-void loop()
-{
-    mqtt.loop();
-    entryScanner.loop();
-    exitScanner.loop();
-    entryOled.loop();
-    exitOled.loop();
-    entryServo.loop();
-    exitServo.loop();
+void loop() {
+  mqtt.loop();
 
-    if (!wifi.connected())
-        return;
+  if (!wifi.connected())
+    return;
 
-    unsigned long now = millis();
+  // Run pairing loop
+  pairing.loop();
 
-    if (!hs.hasValidSession(std::time(nullptr)) &&
-        now - lastHandshakeMs > HANDSHAKE_INTERVAL)
-    {
+  if (!pairing.isPaired())
+    return;
 
-        Serial.println("[HS] Sending handshake...");
+  entryScanner.loop();
+  exitScanner.loop();
+  entryOled.loop();
+  exitOled.loop();
+  entryServo.loop();
+  exitServo.loop();
 
-        NetworkInfo net = wifi.get();
-        std::string payload = hs.buildRequestPayload(
-            net.ssid.c_str(), net.subnetMask.c_str(), net.ip.toString().c_str());
+  unsigned long now = millis();
 
-        mqtt.publish(HANDSHAKE_TOPIC_REQUEST, payload.c_str());
+  if (!hs.hasValidSession(std::time(nullptr)) &&
+      now - lastHandshakeMs > HANDSHAKE_INTERVAL) {
 
-        lastHandshakeMs = now;
-        return;
-    };
-    // Heartbeat after handshake
-    if (hs.hasValidSession(std::time(nullptr)) &&
-        now - lastHeartbeatMs > HEARTBEAT_INTERVALS[currentHeartbeatIndex])
-    {
-        Serial.println("[Heartbeat] Sending...");
+    Serial.println("[HS] Sending handshake...");
 
-        String topic = "iot/heartbeat/" + macStr;
-        StaticJsonDocument<128> doc;
+    NetworkInfo net = wifi.get();
+    std::string payload = hs.buildRequestPayload(
+        net.ssid.c_str(), net.subnetMask.c_str(), net.ip.toString().c_str());
 
-        doc["mac"] = macStr.c_str();
+    mqtt.publish(HANDSHAKE_TOPIC_REQUEST, payload.c_str());
 
-        char buffer[128];
-        serializeJson(doc, buffer);
-        mqtt.publish(topic.c_str(), buffer);
+    lastHandshakeMs = now;
+    return;
+  };
+  // Heartbeat after handshake
+  if (hs.hasValidSession(std::time(nullptr)) &&
+      now - lastHeartbeatMs > HEARTBEAT_INTERVALS[currentHeartbeatIndex]) {
+    Serial.println("[Heartbeat] Sending...");
 
-        lastHeartbeatMs = now;
-        currentHeartbeatIndex = (currentHeartbeatIndex + 1) % 3;
-    };
+    String topic = "iot/heartbeat/" + macStr;
+    StaticJsonDocument<128> doc;
 
-    // pair devices
+    doc["mac"] = macStr.c_str();
+
+    char buffer[128];
+    serializeJson(doc, buffer);
+    mqtt.publish(topic.c_str(), buffer);
+
+    lastHeartbeatMs = now;
+    currentHeartbeatIndex = (currentHeartbeatIndex + 1) % 3;
+  };
 }
