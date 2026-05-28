@@ -36,8 +36,8 @@ String lastCartId = "";
 #define RST_PIN      21
 #define I2C_SDA_PIN  17
 #define I2C_SCL_PIN  16
-#define SERVO_PIN_ENTRY 12
-#define SERVO_PIN_EXIT  13
+#define SERVO_PIN_ENTRY 25
+#define SERVO_PIN_EXIT  26
 
 RFIDScanner entryScanner(GateType::ENTRY, SS_PIN_ENTRY, RST_PIN);
 RFIDScanner exitScanner(GateType::EXIT, SS_PIN_EXIT, RST_PIN);
