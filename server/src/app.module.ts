@@ -13,6 +13,7 @@ import { AuthModule } from './auth/auth.module';
 import { MailModule } from './mail/mail.module';
 import { ParksModule } from './parks/parks.module';
 import { AssignmentsModule } from './assignments/assignments.module';
+import { SocketModule } from './socket/socket.module';
 
 @Module({
     imports: [
@@ -33,6 +34,7 @@ import { AssignmentsModule } from './assignments/assignments.module';
         MailModule,
         ParksModule,
         AssignmentsModule,
+        SocketModule,
     ],
     controllers: [AppController],
     providers: [

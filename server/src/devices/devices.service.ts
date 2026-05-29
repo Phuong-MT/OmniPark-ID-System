@@ -11,7 +11,7 @@ import { Device, DeviceDocument, DeviceStatus, DevicePairState } from './schema/
 import { DBName } from 'src/utils/connectDB';
 import { Park, ParkDocument } from 'src/parks/schema/park.schema';
 import { MqttService } from 'src/mqtt/mqtt.service';
-import { DevicesGateway } from './devices.gateway';
+import { SocketGateway } from '../socket/socket.gateway';
 
 @Injectable()
 export class DevicesService {
@@ -284,9 +284,9 @@ export class DevicesService {
         }
     }
 
-    private gateway: DevicesGateway;
+    private gateway: SocketGateway;
 
-    registerGateway(gateway: DevicesGateway) {
+    registerGateway(gateway: SocketGateway) {
         this.gateway = gateway;
     }
 

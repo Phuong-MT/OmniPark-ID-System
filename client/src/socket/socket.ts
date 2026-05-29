@@ -14,8 +14,17 @@ export default class Socket {
         );
         if (existing) return existing.instance;
 
+        let url = "";
+        if (process.env.REACT_APP_SOCKET_DOMAIN && process.env.REACT_APP_PORT_SOCKET) {
+            url = `${process.env.REACT_APP_SOCKET_DOMAIN}:${process.env.REACT_APP_PORT_SOCKET}/${namespace}`;
+        } else {
+            const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+            const cleanBase = base.replace(/\/$/, "");
+            url = `${cleanBase}/${namespace}`;
+        }
+
         const socketInstance = io(
-            `${process.env.REACT_APP_SOCKET_DOMAIN}:${process.env.REACT_APP_PORT_SOCKET}/${namespace}`,
+            url,
             {
                 transports: ["websocket"],
                 path: `/socket`,

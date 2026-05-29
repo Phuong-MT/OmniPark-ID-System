@@ -8,7 +8,7 @@ import {
     OnGatewayDisconnect,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { DevicesService } from './devices.service';
+import { DevicesService } from '../devices/devices.service';
 import { Inject, Injectable, Logger, forwardRef } from '@nestjs/common';
 
 @WebSocketGateway({
@@ -18,8 +18,8 @@ import { Inject, Injectable, Logger, forwardRef } from '@nestjs/common';
     },
 })
 @Injectable()
-export class DevicesGateway implements OnGatewayConnection, OnGatewayDisconnect {
-    private readonly logger = new Logger(DevicesGateway.name);
+export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
+    private readonly logger = new Logger(SocketGateway.name);
 
     @WebSocketServer()
     server: Server;

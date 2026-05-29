@@ -5,7 +5,7 @@ import { forwardRef, Module } from '@nestjs/common';
 import { DevicesService } from './devices.service';
 import { DevicesController } from './devices.controller';
 import { MqttModule } from 'src/mqtt/mqtt.module';
-import { DevicesGateway } from './devices.gateway';
+import { SocketModule } from '../socket/socket.module';
 import { Park, ParkSchema } from 'src/parks/schema/park.schema';
 
 @Module({
@@ -18,9 +18,10 @@ import { Park, ParkSchema } from 'src/parks/schema/park.schema';
             DBName.omniparkIDSystem,
         ),
         forwardRef(() => MqttModule),
+        forwardRef(() => SocketModule),
     ],
     controllers: [DevicesController],
-    providers: [DevicesService, DevicesGateway],
-    exports: [DevicesService, DevicesGateway],
+    providers: [DevicesService],
+    exports: [DevicesService],
 })
 export class DevicesModule {}
