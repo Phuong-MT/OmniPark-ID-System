@@ -2,7 +2,8 @@ import * as React from "react";
 import { axiosServer } from "@/utils/api/axiosServer";
 import Link from "next/link";
 import { ArrowLeft, MapPin, Clock } from "lucide-react";
-import { AddDeviceAction } from "./AddDeviceAction";
+import { AddDeviceAction } from "./ParkDetailAction";
+import { ParkMapSection } from "./ParkMapSection";
 
 export async function generateMetadata({ params }: { params: Promise<{ parkId: string }> }) {
 	const resolvedParams = await params;
@@ -17,7 +18,7 @@ export default async function ParkDetailPage({ params }: { params: Promise<{ par
 	let park = null;
 	let error = null;
 	try {
-		const res = await axiosServer.get(`/parks/${resolvedParams.parkId}`);		
+		const res = await axiosServer.get(`/parks/${resolvedParams.parkId}`);
 		park = res.data;
 	} catch (err: any) {
 		error = err.response?.data?.message || "Failed to load park details";
@@ -102,6 +103,9 @@ export default async function ParkDetailPage({ params }: { params: Promise<{ par
 					</div>
 				</div>
 			</div>
+
+			{/* Park Map Section */}
+			<ParkMapSection parkId={park._id} map={park.map} />
 		</div>
 	);
 }

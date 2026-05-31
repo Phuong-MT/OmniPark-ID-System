@@ -4,7 +4,7 @@ import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import Socket from "@/socket/socket";
-import { usePairingSocketListeners } from "@/socket/socketListeners";
+import { usePairingSocketListeners } from "@/app/(protected)/parks/[parkId]/hook/usePairingSocketListeners";
 import { X, Loader2, RefreshCw, Cpu, CheckCircle2 } from "lucide-react";
 
 interface AddDeviceModalProps {
@@ -68,7 +68,7 @@ export function AddDeviceModal({ isOpen, onClose, clusters }: AddDeviceModalProp
 		const socket = Socket.getInstant("");
 		if (!selectedDeviceMac || !selectedClusterId || !socket) return;
 
-		const device = devices.find(d => d.macAddress === selectedDeviceMac);
+		const device = devices.find((d) => d.macAddress === selectedDeviceMac);
 		if (!device) return;
 
 		setIsLoading(true);
@@ -78,7 +78,7 @@ export function AddDeviceModal({ isOpen, onClose, clusters }: AddDeviceModalProp
 		socket.emit("pair_device", {
 			macAddress: selectedDeviceMac,
 			objectId: selectedClusterId,
-			sectionId: device.pairToken
+			sectionId: device.pairToken,
 		});
 	};
 
@@ -116,15 +116,19 @@ export function AddDeviceModal({ isOpen, onClose, clusters }: AddDeviceModalProp
 					)}
 
 					{!successMsg && (
-						<form onSubmit={handlePair} id="pair-device-form" className="flex flex-col gap-4">
+						<form
+							onSubmit={handlePair}
+							id="pair-device-form"
+							className="flex flex-col gap-4"
+						>
 							<div className="flex justify-between items-center">
 								<Label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
 									1. Select Device Requesting Pairing
 								</Label>
-								<Button 
-									type="button" 
-									variant="outline" 
-									size="sm" 
+								<Button
+									type="button"
+									variant="outline"
+									size="sm"
 									onClick={refreshList}
 									className="flex items-center gap-1 h-8"
 									disabled={isLoading}
@@ -136,8 +140,10 @@ export function AddDeviceModal({ isOpen, onClose, clusters }: AddDeviceModalProp
 
 							{devices.length === 0 ? (
 								<div className="text-center py-6 px-4 border-2 border-dashed border-zinc-200 dark:border-zinc-800 rounded-lg text-sm text-zinc-500 dark:text-zinc-400">
-									No devices are currently requesting to pair.<br/>
-									Ensure the device is powered, connected to WiFi, and displaying the pairing screen.
+									No devices are currently requesting to pair.
+									<br />
+									Ensure the device is powered, connected to WiFi, and displaying
+									the pairing screen.
 								</div>
 							) : (
 								<div className="grid gap-2 max-h-[180px] overflow-y-auto pr-1">
@@ -156,7 +162,9 @@ export function AddDeviceModal({ isOpen, onClose, clusters }: AddDeviceModalProp
 													name="selectedDevice"
 													value={dev.macAddress}
 													checked={selectedDeviceMac === dev.macAddress}
-													onChange={() => setSelectedDeviceMac(dev.macAddress)}
+													onChange={() =>
+														setSelectedDeviceMac(dev.macAddress)
+													}
 													className="text-indigo-600 focus:ring-indigo-500"
 													disabled={isLoading}
 												/>
@@ -183,12 +191,16 @@ export function AddDeviceModal({ isOpen, onClose, clusters }: AddDeviceModalProp
 							)}
 
 							<div className="grid gap-2">
-								<Label htmlFor="cluster-select" className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+								<Label
+									htmlFor="cluster-select"
+									className="text-sm font-medium text-zinc-700 dark:text-zinc-300"
+								>
 									2. Select Cluster/Zone Location
 								</Label>
 								{clusters.length === 0 ? (
 									<div className="text-sm text-amber-500 dark:text-amber-400">
-										No clusters exist in this park. Please create a cluster first.
+										No clusters exist in this park. Please create a cluster
+										first.
 									</div>
 								) : (
 									<select
@@ -199,7 +211,11 @@ export function AddDeviceModal({ isOpen, onClose, clusters }: AddDeviceModalProp
 										className="flex h-10 w-full rounded-md border border-zinc-200 bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-zinc-950 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:ring-zinc-300"
 									>
 										{clusters.map((cluster) => (
-											<option key={cluster._id} value={cluster._id} className="dark:bg-zinc-900">
+											<option
+												key={cluster._id}
+												value={cluster._id}
+												className="dark:bg-zinc-900"
+											>
 												{cluster.name}
 											</option>
 										))}
@@ -214,8 +230,12 @@ export function AddDeviceModal({ isOpen, onClose, clusters }: AddDeviceModalProp
 							<Loader2 className="h-6 w-6 animate-spin text-indigo-500" />
 							{isPairingState ? (
 								<div className="text-center">
-									<p className="font-medium text-zinc-900 dark:text-zinc-100">Pairing request initiated...</p>
-									<p className="text-xs mt-1">Please look at the physical device OLED screen.</p>
+									<p className="font-medium text-zinc-900 dark:text-zinc-100">
+										Pairing request initiated...
+									</p>
+									<p className="text-xs mt-1">
+										Please look at the physical device OLED screen.
+									</p>
 								</div>
 							) : (
 								<p>Sending request to server...</p>
@@ -226,13 +246,23 @@ export function AddDeviceModal({ isOpen, onClose, clusters }: AddDeviceModalProp
 
 				{!successMsg && (
 					<div className="p-4 border-t border-zinc-200 dark:border-zinc-800 flex justify-end gap-2">
-						<Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
+						<Button
+							type="button"
+							variant="outline"
+							onClick={onClose}
+							disabled={isLoading}
+						>
 							Cancel
 						</Button>
 						<Button
 							type="submit"
 							form="pair-device-form"
-							disabled={isLoading || !selectedDeviceMac || !selectedClusterId || devices.length === 0}
+							disabled={
+								isLoading ||
+								!selectedDeviceMac ||
+								!selectedClusterId ||
+								devices.length === 0
+							}
 							className="bg-indigo-600 hover:bg-indigo-700 text-white dark:bg-indigo-600 dark:hover:bg-indigo-700"
 						>
 							{isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

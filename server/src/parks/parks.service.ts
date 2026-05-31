@@ -1,4 +1,9 @@
-import { Injectable, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+    Injectable,
+    Logger,
+    BadRequestException,
+    NotFoundException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { DBName } from '../utils/connectDB';
@@ -30,7 +35,9 @@ export class ParksService {
             filter.status = query.status;
         }
         if (query.parkIds && query.parkIds.length > 0) {
-            filter._id = { $in: query.parkIds.map((id: string) => new Types.ObjectId(id)) };
+            filter._id = {
+                $in: query.parkIds.map((id: string) => new Types.ObjectId(id)),
+            };
         }
         if (query.parkIds && query.parkIds.length === 0) {
             // Force empty result if POC has no assignments
@@ -67,7 +74,6 @@ export class ParksService {
         if (!Types.ObjectId.isValid(id)) {
             throw new BadRequestException('Invalid Park ID format');
         }
-
         const filter: any = { _id: new Types.ObjectId(id) };
         if (tenantCode) {
             filter.tenantCode = new Types.ObjectId(tenantCode);
@@ -79,7 +85,11 @@ export class ParksService {
         return park;
     }
 
-    async createPark(createParkDto: { tenantCode: any; name: string; description?: string }) {
+    async createPark(createParkDto: {
+        tenantCode: any;
+        name: string;
+        description?: string;
+    }) {
         const existingPark = await this.parkModel.findOne({
             name: createParkDto.name,
             tenantCode: createParkDto.tenantCode,
@@ -87,11 +97,62 @@ export class ParksService {
         if (existingPark) {
             throw new Error('Park already exists');
         }
-        const payload ={
+        const payload = {
             ...createParkDto,
             tenantCode: new Types.ObjectId(createParkDto.tenantCode),
-        }
+        };
         const newPark = new this.parkModel(payload);
         return newPark.save();
+    }
+
+    async uploadParkMap(
+        parkId: string,
+        tenantCode: string | undefined,
+        images: {
+            original: string;
+            preview: string;
+            thumbnail: string;
+            publicId?: string;
+            config?: {
+                width: number;
+                height: number;
+                scale: number;
+            };
+        },
+    ) {
+        if (!Types.ObjectId.isValid(parkId)) {
+            throw new BadRequestException('Invalid Park ID format');
+        }
+        const filter: any = { _id: new Types.ObjectId(parkId) };
+        if (tenantCode) {
+            filter.tenantCode = new Types.ObjectId(tenantCode);
+        }
+
+        const park = await this.parkModel.findOne(filter);
+        if (!park) {
+            throw new NotFoundException('Park not found');
+        }
+
+        const updated = await this.parkModel
+            .findByIdAndUpdate(
+                parkId,
+                {
+                    $set: {
+                        'map.image.original':  images.original,
+                        'map.image.preview':   images.preview,
+                        'map.image.thumbnail': images.thumbnail,
+                        'map.config.width':   images.config.width,
+                        'map.config.height':  images.config.height,
+                        'map.config.scale':   images.config.scale,
+                    },
+                },
+                { new: true },
+            )
+            .lean();
+
+        this.logger.log(
+            `Park ${parkId} map updated — original / preview / thumbnail saved`,
+        );
+        return updated;
     }
 }
