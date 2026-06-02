@@ -5,9 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { AddDeviceModal } from "./AddDeviceModal";
 
-export function AddDeviceAction({ clusters }: { clusters: any[] }) {
+export function AddParkDetailAction({ clusters }: { clusters: any[] }) {
 	const [isDevicesModalOpen, setIsDevicesModalOpen] = React.useState(false);
-	const [isClusterModalOpen, setIsClusterModalOpen] = React.useState(false);
 
 	return (
 		<>
@@ -20,7 +19,11 @@ export function AddDeviceAction({ clusters }: { clusters: any[] }) {
 					Add device for park
 				</Button>
 				<Button
-					onClick={() => setIsClusterModalOpen(true)}
+					onClick={() => {
+						if (typeof window !== "undefined") {
+							window.dispatchEvent(new CustomEvent("trigger-add-cluster"));
+						}
+					}}
 					className="flex items-center gap-2"
 					variant="outline"
 				>

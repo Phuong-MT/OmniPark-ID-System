@@ -3,6 +3,7 @@ import {
     Get,
     Post,
     Patch,
+    Delete,
     Body,
     Req,
     Query,
@@ -23,6 +24,8 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../user/schema/user.schema';
 import { AssignmentsService } from '../assignments/assignments.service';
 import { CreateParkDto } from './dto/create-park.dto';
+import { CreateClusterDto } from './dto/create-cluster.dto';
+import { UpdateClusterDto } from './dto/update-cluster.dto';
 
 @Controller('parks')
 export class ParksController {
@@ -134,5 +137,48 @@ export class ParksController {
             publicId,
             config
         });
+    }
+
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.POC)
+    @Post(':parkId/clusters')
+    async addCluster(
+        @Req() req,
+        @Param('parkId') parkId: string,
+        @Body() createClusterDto: CreateClusterDto,
+    ) {
+        const user = req.user;
+        const tenantCode =
+            user.role === UserRole.SUPER_ADMIN ? undefined : user.tenantCode;
+        return this.parksService.addCluster(parkId, tenantCode, createClusterDto);
+    }
+
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.POC)
+    @Patch(':parkId/clusters/:clusterId')
+    async updateCluster(
+        @Req() req,
+        @Param('parkId') parkId: string,
+        @Param('clusterId') clusterId: string,
+        @Body() updateClusterDto: UpdateClusterDto,
+    ) {
+        const user = req.user;
+        const tenantCode =
+            user.role === UserRole.SUPER_ADMIN ? undefined : user.tenantCode;
+        return this.parksService.updateCluster(parkId, clusterId, tenantCode, updateClusterDto);
+    }
+
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.POC)
+    @Delete(':parkId/clusters/:clusterId')
+    async deleteCluster(
+        @Req() req,
+        @Param('parkId') parkId: string,
+        @Param('clusterId') clusterId: string,
+    ) {
+        const user = req.user;
+        const tenantCode =
+            user.role === UserRole.SUPER_ADMIN ? undefined : user.tenantCode;
+        return this.parksService.deleteCluster(parkId, clusterId, tenantCode);
     }
 }

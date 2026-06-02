@@ -2,7 +2,7 @@ import * as React from "react";
 import { axiosServer } from "@/utils/api/axiosServer";
 import Link from "next/link";
 import { ArrowLeft, MapPin, Clock } from "lucide-react";
-import { AddDeviceAction } from "./ParkDetailAction";
+import { AddParkDetailAction } from "./ParkDetailAction";
 import { ParkMapSection } from "./ParkMapSection";
 
 export async function generateMetadata({ params }: { params: Promise<{ parkId: string }> }) {
@@ -59,7 +59,7 @@ export default async function ParkDetailPage({ params }: { params: Promise<{ par
 					</div>
 				</div>
 
-				<AddDeviceAction clusters={park.clusters || []} />
+				<AddParkDetailAction clusters={park.clusters || []} />
 			</div>
 
 			<div className="rounded-xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-950 p-6">
@@ -105,7 +105,7 @@ export default async function ParkDetailPage({ params }: { params: Promise<{ par
 			</div>
 
 			{/* Park Map Section */}
-			<ParkMapSection parkId={park._id} map={park.map} />
+			<ParkMapSection parkId={park._id} map={park.map} initialClusters={park.clusters || []} />
 		</div>
 	);
 }

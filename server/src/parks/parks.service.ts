@@ -155,4 +155,127 @@ export class ParksService {
         );
         return updated;
     }
+
+    async addCluster(
+        parkId: string,
+        tenantCode: string | undefined,
+        createClusterDto: { name: string; position?: { x?: number; y?: number; lat?: number; lng?: number } },
+    ) {
+        if (!Types.ObjectId.isValid(parkId)) {
+            throw new BadRequestException('Invalid Park ID format');
+        }
+        const filter: any = { _id: new Types.ObjectId(parkId) };
+        if (tenantCode) {
+            filter.tenantCode = new Types.ObjectId(tenantCode);
+        }
+
+        const newClusterId = new Types.ObjectId();
+        const newCluster = {
+            _id: newClusterId,
+            name: createClusterDto.name,
+            position: createClusterDto.position || { x: 50, y: 50, lat: 0, lng: 0 },
+            stats: {
+                totalDevices: 0,
+                onlineDevices: 0,
+            },
+            metadata: {},
+        };
+
+        const updated = await this.parkModel
+            .findOneAndUpdate(
+                filter,
+                { $push: { clusters: newCluster } },
+                { new: true },
+            )
+            .lean();
+
+        if (!updated) {
+            throw new NotFoundException('Park not found');
+        }
+
+        return updated;
+    }
+
+    async updateCluster(
+        parkId: string,
+        clusterId: string,
+        tenantCode: string | undefined,
+        updateClusterDto: { name?: string; position?: { x?: number; y?: number; lat?: number; lng?: number } },
+    ) {
+        if (!Types.ObjectId.isValid(parkId) || !Types.ObjectId.isValid(clusterId)) {
+            throw new BadRequestException('Invalid Park ID or Cluster ID format');
+        }
+        const filter: any = { _id: new Types.ObjectId(parkId) };
+        if (tenantCode) {
+            filter.tenantCode = new Types.ObjectId(tenantCode);
+        }
+
+        const updateFields: any = {};
+        if (updateClusterDto.name !== undefined) {
+            updateFields['clusters.$[elem].name'] = updateClusterDto.name;
+        }
+        if (updateClusterDto.position !== undefined) {
+            if (updateClusterDto.position.x !== undefined) {
+                updateFields['clusters.$[elem].position.x'] = updateClusterDto.position.x;
+            }
+            if (updateClusterDto.position.y !== undefined) {
+                updateFields['clusters.$[elem].position.y'] = updateClusterDto.position.y;
+            }
+            if (updateClusterDto.position.lat !== undefined) {
+                updateFields['clusters.$[elem].position.lat'] = updateClusterDto.position.lat;
+            }
+            if (updateClusterDto.position.lng !== undefined) {
+                updateFields['clusters.$[elem].position.lng'] = updateClusterDto.position.lng;
+            }
+        }
+
+        if (Object.keys(updateFields).length === 0) {
+            return this.getParkById(parkId, tenantCode);
+        }
+
+        const updated = await this.parkModel
+            .findOneAndUpdate(
+                filter,
+                { $set: updateFields },
+                {
+                    arrayFilters: [{ 'elem._id': new Types.ObjectId(clusterId) }],
+                    new: true,
+                },
+            )
+            .lean();
+
+        if (!updated) {
+            throw new NotFoundException('Park or Cluster not found');
+        }
+
+        return updated;
+    }
+
+    async deleteCluster(
+        parkId: string,
+        clusterId: string,
+        tenantCode: string | undefined,
+    ) {
+        if (!Types.ObjectId.isValid(parkId) || !Types.ObjectId.isValid(clusterId)) {
+            throw new BadRequestException('Invalid Park ID or Cluster ID format');
+        }
+        const filter: any = { _id: new Types.ObjectId(parkId) };
+        if (tenantCode) {
+            filter.tenantCode = new Types.ObjectId(tenantCode);
+        }
+
+        const updated = await this.parkModel
+            .findOneAndUpdate(
+                filter,
+                { $pull: { clusters: { _id: new Types.ObjectId(clusterId) } } },
+                { new: true },
+            )
+            .lean();
+
+        if (!updated) {
+            throw new NotFoundException('Park not found');
+        }
+
+        return updated;
+    }
 }

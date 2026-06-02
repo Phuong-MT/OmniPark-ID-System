@@ -3,32 +3,32 @@
 import React, { useRef, useState, useCallback } from "react";
 import { ImagePlus, UploadCloud, X, CheckCircle, AlertCircle } from "lucide-react";
 import apiClient from "@/utils/api/axios";
+import { AddClusterAction } from "./AddClusterAction";
 
 interface ParkMapSectionProps {
 	parkId: string;
 	map?: {
-        image: {
-            original: string;
-            preview: string;
-            thumbnail: string;
-        };
+		image: {
+			original: string;
+			preview: string;
+			thumbnail: string;
+		};
 		config: {
 			width: number;
-            height: number;
-		}
-	}
+			height: number;
+		};
+	};
+	initialClusters?: any[];
 }
 
 type UploadStatus = "idle" | "previewing" | "uploading" | "success" | "error";
 
-export function ParkMapSection({ parkId, map }: ParkMapSectionProps) {
+export function ParkMapSection({ parkId, map, initialClusters = [] }: ParkMapSectionProps) {
 	const fileInputRef = useRef<HTMLInputElement>(null);
-	const [status, setStatus] = useState<UploadStatus>(
-		map ? "success" : "idle"
-	);
-	const [previewUrl, setPreviewUrl] = useState<string | null>(
-		map?.image?.original ?? null
-	);
+	const mapContainerRef = useRef<HTMLDivElement>(null);
+
+	const [status, setStatus] = useState<UploadStatus>(map ? "success" : "idle");
+	const [previewUrl, setPreviewUrl] = useState<string | null>(map?.image?.original ?? null);
 	const [selectedFile, setSelectedFile] = useState<File | null>(null);
 	const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -90,9 +90,7 @@ export function ParkMapSection({ parkId, map }: ParkMapSectionProps) {
 			setSelectedFile(null);
 			setStatus("success");
 		} catch (err: any) {
-			setErrorMsg(
-				err?.response?.data?.message ?? "Upload failed. Please try again."
-			);
+			setErrorMsg(err?.response?.data?.message ?? "Upload failed. Please try again.");
 			setStatus("previewing");
 		}
 	};
@@ -159,14 +157,28 @@ export function ParkMapSection({ parkId, map }: ParkMapSectionProps) {
 
 				{/* Map image / Placeholder */}
 				{previewUrl ? (
-					<div className="relative group rounded-lg overflow-hidden border border-zinc-200 dark:border-zinc-700">
+					<div
+						ref={mapContainerRef}
+						className="relative group rounded-lg border border-zinc-200 dark:border-zinc-700 select-none"
+					>
 						<img
 							src={previewUrl}
 							alt="Park map"
 							width={map?.config?.width}
 							height={map?.config?.height}
-							className="w-full object-contain bg-zinc-50 dark:bg-zinc-900"
+							className="w-full h-auto block bg-zinc-50 dark:bg-zinc-900 rounded-lg"
 						/>
+
+						{/* Interactive Clusters Overlay */}
+						{status === "success" && (
+							<AddClusterAction
+								parkId={parkId}
+								initialClusters={initialClusters}
+								mapContainerRef={mapContainerRef}
+								previewUrl={previewUrl}
+							/>
+						)}
+
 						{/* Uploading overlay */}
 						{status === "uploading" && (
 							<div className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 backdrop-blur-sm gap-3">
@@ -197,8 +209,8 @@ export function ParkMapSection({ parkId, map }: ParkMapSectionProps) {
 								No map uploaded yet
 							</p>
 							<p className="mt-1 text-xs text-zinc-400 dark:text-zinc-500">
-								Click to select an image &bull; JPEG, PNG, WebP, GIF &bull; max
-								10 MB
+								Click to select an image &bull; JPEG, PNG, WebP, GIF &bull; max 10
+								MB
 							</p>
 						</div>
 					</button>
