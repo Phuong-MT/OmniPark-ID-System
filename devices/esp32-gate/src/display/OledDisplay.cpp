@@ -95,7 +95,10 @@ void OledDisplay::showGreeting(const String &cardId)
     _display.clearDisplay();
     drawHeader("OMNIPARK");
 
-    centerText("WELCOME", 25, 2);
+    if (_gateType == GateType::ENTRY)
+        centerText("WELCOME", 25, 2);
+    else
+        centerText("GOODBYE", 25, 2);
     centerText("ID: " + cardId, 48, 1);
 
     _display.display();
