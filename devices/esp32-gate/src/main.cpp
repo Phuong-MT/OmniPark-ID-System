@@ -25,7 +25,8 @@ String lastCartId = "";
 
 #define SS_PIN_ENTRY 5
 #define SS_PIN_EXIT 4
-#define RST_PIN 21
+#define RST_PIN_ENTRY 21
+#define RST_PIN_EXIT 22
 #define I2C_SDA_PIN_ENTRY 17
 #define I2C_SCL_PIN_ENTRY 16
 
@@ -36,8 +37,8 @@ String lastCartId = "";
 #define SERVO_PIN_ENTRY 25
 #define SERVO_PIN_EXIT 26
 
-RFIDScanner entryScanner(GateType::ENTRY, SS_PIN_ENTRY, RST_PIN);
-RFIDScanner exitScanner(GateType::EXIT, SS_PIN_EXIT, RST_PIN);
+RFIDScanner entryScanner(GateType::ENTRY, SS_PIN_ENTRY, RST_PIN_ENTRY);
+RFIDScanner exitScanner(GateType::EXIT, SS_PIN_EXIT, RST_PIN_EXIT);
 
 OledDisplay entryOled(GateType::ENTRY, &Wire, 0x3C);
 // Khởi tạo exitOled dùng Wire1, địa chỉ thường là 0x3C nếu nó khác bus I2C với
