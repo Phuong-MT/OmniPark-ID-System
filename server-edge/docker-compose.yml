@@ -25,6 +25,14 @@ services:
     environment:
       - BACKEND_URL=http://host.docker.internal:3000
       - EDGE_NODE_ID=edge-default
+      - CAMERA_REFRESH_INTERVAL_SECONDS=15
+      - BACKEND_TIMEOUT_SECONDS=10
+      - EVENT_FORWARD_RETRIES=3
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/status')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
     depends_on:
       - mediamtx
 
@@ -34,8 +42,14 @@ services:
     container_name: ai-service
     restart: unless-stopped
     environment:
-      - MEDIAMTX_RTSP_URL=rtsp://mediamtx:8554/mystream
       - EDGE_API_URL=http://edge-api:8000
+      - CAMERA_REFRESH_INTERVAL_SECONDS=10
+      - TARGET_FPS=5
+      - EVENT_DISPATCH_RETRIES=3
+      - PLATE_DEBOUNCE_SECONDS=5
+      - STREAM_RECONNECT_DELAY_SECONDS=3
+      - STREAM_OPEN_TIMEOUT_MS=5000
+      - STREAM_READ_TIMEOUT_MS=5000
     depends_on:
-      - mediamtx
-      - edge-api
+      edge-api:
+        condition: service_healthy

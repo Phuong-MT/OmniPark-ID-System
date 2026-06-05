@@ -17,14 +17,19 @@ class ConnectionManager:
         self.active_connections.append(websocket)
 
     def disconnect(self, websocket: WebSocket):
-        self.active_connections.remove(websocket)
+        if websocket in self.active_connections:
+            self.active_connections.remove(websocket)
 
     async def broadcast(self, message: dict):
+        disconnected = []
         for connection in self.active_connections:
             try:
                 await connection.send_json(message)
             except Exception as e:
                 logger.error(f"Error broadcasting to client: {str(e)}")
+                disconnected.append(connection)
+        for connection in disconnected:
+            self.disconnect(connection)
 
 manager = ConnectionManager()
 

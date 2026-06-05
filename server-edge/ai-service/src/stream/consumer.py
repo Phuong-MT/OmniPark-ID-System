@@ -3,9 +3,31 @@ import logging
 import time
 import numpy as np
 import httpx
+import os
+from urllib.parse import urlsplit, urlunsplit
 from typing import Optional
 
 logger = logging.getLogger(__name__)
+
+RECONNECT_DELAY_SECONDS = float(os.getenv("STREAM_RECONNECT_DELAY_SECONDS", "3"))
+STREAM_OPEN_TIMEOUT_MS = int(os.getenv("STREAM_OPEN_TIMEOUT_MS", "5000"))
+STREAM_READ_TIMEOUT_MS = int(os.getenv("STREAM_READ_TIMEOUT_MS", "5000"))
+
+
+def redact_stream_url(url: str) -> str:
+    try:
+        parsed = urlsplit(url)
+        if not parsed.username:
+            return url
+        hostname = parsed.hostname or ""
+        if parsed.port:
+            hostname = f"{hostname}:{parsed.port}"
+        return urlunsplit(
+            (parsed.scheme, f"{parsed.username}:***@{hostname}", parsed.path, parsed.query, parsed.fragment)
+        )
+    except Exception:
+        return "<invalid-stream-url>"
+
 
 class StreamConsumer:
     def __init__(self, url: str):
@@ -16,7 +38,7 @@ class StreamConsumer:
         self.bytes_buffer = bytes()
 
     def connect(self):
-        logger.info(f"Connecting to stream at {self.url}")
+        logger.info("Connecting to stream at %s", redact_stream_url(self.url))
         if self.is_http:
             try:
                 # Need httpx.Client to keep connection alive
@@ -34,9 +56,18 @@ class StreamConsumer:
         else:
             # Support local webcam by converting "0", "1", etc. to integers
             source = int(self.url) if str(self.url).isdigit() else self.url
-            self.cap = cv2.VideoCapture(source)
+            self.cap = cv2.VideoCapture()
+            if hasattr(cv2, "CAP_PROP_OPEN_TIMEOUT_MSEC"):
+                self.cap.set(cv2.CAP_PROP_OPEN_TIMEOUT_MSEC, STREAM_OPEN_TIMEOUT_MS)
+            if hasattr(cv2, "CAP_PROP_READ_TIMEOUT_MSEC"):
+                self.cap.set(cv2.CAP_PROP_READ_TIMEOUT_MSEC, STREAM_READ_TIMEOUT_MS)
+            self.cap.open(source)
             if not self.cap.isOpened():
-                logger.error(f"Failed to open video stream: {source}")
+                logger.error(
+                    "Failed to open video stream: %s",
+                    redact_stream_url(str(source)),
+                )
+                self.close()
                 return False
             return True
 
@@ -44,7 +75,7 @@ class StreamConsumer:
         if self.is_http:
             if self.http_stream is None:
                 if not self.connect():
-                    time.sleep(5)
+                    time.sleep(RECONNECT_DELAY_SECONDS)
                     return None
             
             try:
@@ -65,7 +96,7 @@ class StreamConsumer:
         else:
             if not self.cap or not self.cap.isOpened():
                 if not self.connect():
-                    time.sleep(5)
+                    time.sleep(RECONNECT_DELAY_SECONDS)
                     return None
 
             ret, frame = self.cap.read()

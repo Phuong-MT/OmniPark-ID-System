@@ -1,4 +1,5 @@
 import logging
+import os
 import numpy as np
 
 try:
@@ -25,8 +26,13 @@ class YoloPipelineEngine(InferenceEngine):
 
     def load_models(self, vehicle_model_path: str, plate_model_path: str):
         if YOLO is None:
-            logger.error("ultralytics package is not installed. Run: pip install ultralytics")
-            return
+            raise RuntimeError("ultralytics package is not installed")
+        if easyocr is None:
+            raise RuntimeError("easyocr package is not installed")
+        if not os.path.isfile(vehicle_model_path):
+            raise FileNotFoundError(f"vehicle model not found: {vehicle_model_path}")
+        if not os.path.isfile(plate_model_path):
+            raise FileNotFoundError(f"plate model not found: {plate_model_path}")
             
         try:
             # Load the general object detection model (YOLOv8n)
@@ -37,17 +43,15 @@ class YoloPipelineEngine(InferenceEngine):
             self.plate_model = YOLO(plate_model_path)
             logger.info(f"Loaded plate model from {plate_model_path}")
             
-            if easyocr is not None:
-                # Initialize EasyOCR for English (which handles standard alphanumeric plates well)
-                # gpu=False by default for Edge devices without discrete GPUs, can be enabled if MPS/CUDA is available
-                logger.info("Initializing EasyOCR reader (this might take a moment)...")
-                self.ocr_reader = easyocr.Reader(['en'], gpu=False)
-                logger.info("EasyOCR loaded successfully")
-            else:
-                logger.error("easyocr package is not installed. Run: pip install easyocr")
+            # Initialize EasyOCR for English (which handles standard alphanumeric plates well)
+            # gpu=False by default for Edge devices without discrete GPUs.
+            logger.info("Initializing EasyOCR reader (this might take a moment)...")
+            self.ocr_reader = easyocr.Reader(['en'], gpu=False)
+            logger.info("EasyOCR loaded successfully")
 
-        except Exception as e:
-            logger.error(f"Failed to load AI models: {str(e)}")
+        except Exception:
+            logger.exception("Failed to load AI models")
+            raise
 
     def infer(self, frame: np.ndarray) -> list[dict]:
         if not self.vehicle_model or not self.plate_model:
