@@ -1,4 +1,13 @@
-import { Controller, Logger, Get, Req, Query, UseGuards, Post, Body } from '@nestjs/common';
+import {
+    Controller,
+    Logger,
+    Get,
+    Req,
+    Query,
+    UseGuards,
+    Post,
+    Body,
+} from '@nestjs/common';
 import { DevicesService } from './devices.service';
 import { MqttSubscribe } from '../mqtt/ mqtt.decorator';
 import { MqttService } from 'src/mqtt/mqtt.service';
@@ -33,14 +42,14 @@ export class DevicesController {
         const isAdmin = user.role === UserRole.ADMIN;
         // If ADMIN, only find devices for their tenant. For SUPER_ADMIN, it takes query param.
         const targetTenantCode = isAdmin ? user.tenantCode : tenantCode;
-        
+
         const pageNum = parseInt(page, 10) || 1;
         const limitNum = parseInt(limit, 10) || 10;
-        
+
         return this.devicesService.findDevices(
             { tenantCode: targetTenantCode, type, search },
             pageNum,
-            limitNum
+            limitNum,
         );
     }
 
@@ -130,9 +139,9 @@ export class DevicesController {
             });
 
             this.logger.log(`Sent pair token to ${responseTopic}`);
-        } catch (error) {
+        } catch (error: any) {
             this.logger.error(
-                `Failed to handle pair forward: ${error.message}`,
+                `Failed to handle pair forward: ${error?.message}`,
             );
         }
     }
@@ -158,8 +167,10 @@ export class DevicesController {
             // Notify device it's active
             const responseTopic = `iot/${context.params.tenantCode}/${context.params.type}/${mac}/pair-status`;
             this.mqttService.publish(responseTopic, { status: 'ACTIVE' });
-        } catch (error) {
-            this.logger.error(`Activation failed for ${mac}: ${error.message}`);
+        } catch (error: any) {
+            this.logger.error(
+                `Activation failed for ${mac}: ${error?.message}`,
+            );
         }
     }
 
@@ -176,10 +187,14 @@ export class DevicesController {
     }
 
     @MqttSubscribe('iot/pair-request')
-    async handlePairRequest(
-        message: { mac: string; sectionId: string; type: string },
-    ) {
-        this.logger.log(`MQTT Pair request received: ${JSON.stringify(message)}`);
+    async handlePairRequest(message: {
+        mac: string;
+        sectionId: string;
+        type: string;
+    }) {
+        this.logger.log(
+            `MQTT Pair request received: ${JSON.stringify(message)}`,
+        );
         if (message && message.mac && message.sectionId && message.type) {
             await this.devicesService.registerPairRequest(
                 message.mac,

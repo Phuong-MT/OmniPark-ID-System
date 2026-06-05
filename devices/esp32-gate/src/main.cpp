@@ -52,34 +52,36 @@ String clientId = "ESP32_GATE_" + String((uint32_t)ESP.getEfuseMac(), HEX);
 String macStr = String((uint32_t)ESP.getEfuseMac(), HEX);
 HandshakeManager hs(clientId.c_str(), macStr.c_str());
 
-PairingHandler pairing(mqtt, "GATE", entryOled, exitOled);
+PairingHandler pairing(mqtt, deviceInfo, "GATE", entryOled, exitOled);
 
-void onCardScanned(GateType type, const String &cardId, bool isError) {
-  String gateName = (type == GateType::ENTRY) ? "ENTRY" : "EXIT";
-  OledDisplay &targetOled = (type == GateType::ENTRY) ? entryOled : exitOled;
-  GateServo &targetServo = (type == GateType::ENTRY) ? entryServo : exitServo;
+void onCardScanned(GateType type, const String &cardId, bool isError)
+{
+    String gateName = (type == GateType::ENTRY) ? "ENTRY" : "EXIT";
+    OledDisplay &targetOled = (type == GateType::ENTRY) ? entryOled : exitOled;
+    GateServo &targetServo = (type == GateType::ENTRY) ? entryServo : exitServo;
 
-  if (isError) {
-    targetOled.showError();
-    return;
-  }
+    if (isError)
+    {
+        targetOled.showError();
+        return;
+    }
 
-  targetOled.showGreeting(cardId);
-  targetServo.open();
+    targetOled.showGreeting(cardId);
+    targetServo.open();
 
-  Serial.println("[" + gateName + "] Card scanned: " + cardId);
+    Serial.println("[" + gateName + "] Card scanned: " + cardId);
 
-  StaticJsonDocument<128> doc;
-  doc["mac"] = macStr.c_str();
-  doc["card_id"] = cardId.c_str();
-  doc["gate"] = gateName.c_str();
-  doc["timestamp"] = std::time(nullptr);
+    StaticJsonDocument<128> doc;
+    doc["mac"] = macStr.c_str();
+    doc["card_id"] = cardId.c_str();
+    doc["gate"] = gateName.c_str();
+    doc["timestamp"] = std::time(nullptr);
 
-  char buffer[128];
-  serializeJson(doc, buffer);
-  Serial.println(buffer);
-  String topic = "iot/gate/" + macStr + "/rfid";
-  mqtt.publish(topic.c_str(), buffer);
+    char buffer[128];
+    serializeJson(doc, buffer);
+    Serial.println(buffer);
+    String topic = "iot/gate/" + macStr + "/rfid";
+    mqtt.publish(topic.c_str(), buffer);
 }
 
 unsigned long lastHandshakeMs = 0;
@@ -90,124 +92,135 @@ const unsigned long HEARTBEAT_INTERVALS[] = {60000, 120000,
                                              300000}; // 1m, 2m, 5m
 int currentHeartbeatIndex = 0;
 
-void setup() {
-  Serial.begin(115200);
-  Serial.println("ESP32 Gate Controller Booting...");
-  Serial.println("Client ID: " + clientId);
+void setup()
+{
+    Serial.begin(115200);
+    Serial.println("ESP32 Gate Controller Booting...");
+    Serial.println("Client ID: " + clientId);
 
-  pinMode(LED_PIN, OUTPUT);
+    pinMode(LED_PIN, OUTPUT);
 
-  delay(1000);
-  wifi.begin();
-  while (!wifi.connected()) {
-    Serial.println("Waiting for WiFi connection...");
-    delay(2000);
-  }
-  NetworkInfo net = wifi.get();
+    delay(1000);
+    wifi.begin();
+    while (!wifi.connected())
+    {
+        Serial.println("Waiting for WiFi connection...");
+        delay(2000);
+    }
+    NetworkInfo net = wifi.get();
 
-  if (!net.connected) {
-    Serial.println("WiFi not connected!");
-    return;
-  };
+    if (!net.connected)
+    {
+        Serial.println("WiFi not connected!");
+        return;
+    };
 
-  Serial.println("WiFi Connected!");
-  Serial.print("SSID: ");
-  Serial.println(net.ssid);
-  Serial.print("BSSID: ");
-  Serial.println(net.bssid);
-  Serial.print("IP Address: ");
-  Serial.println(net.ip);
-  Serial.print("Gateway: ");
-  Serial.println(net.gateway);
-  Serial.print("RSSI: ");
-  Serial.println(net.rssi);
+    Serial.println("WiFi Connected!");
+    Serial.print("SSID: ");
+    Serial.println(net.ssid);
+    Serial.print("BSSID: ");
+    Serial.println(net.bssid);
+    Serial.print("IP Address: ");
+    Serial.println(net.ip);
+    Serial.print("Gateway: ");
+    Serial.println(net.gateway);
+    Serial.print("RSSI: ");
+    Serial.println(net.rssi);
 
-  Serial.println("Setup wifi completed.");
+    Serial.println("Setup wifi completed.");
 
-  // register handle callback message broker
-  mqtt.registerHandler(
-      HANDSHAKE_TOPIC_RESPONSE(macStr.c_str()).c_str(),
-      [&](const char *, const uint8_t *payload, unsigned int length) {
-        Serial.println("Handshake ack");
-        string msg((char *)payload, length);
-        if (hs.handleResponsePayload(msg)) {
-          Serial.println("[HS] Handshake OK");
-        } else {
-          Serial.println("[HS] Handshake Failed");
-        }
-      });
+    // register handle callback message broker
+    mqtt.registerHandler(
+        HANDSHAKE_TOPIC_RESPONSE(macStr.c_str()).c_str(),
+        [&](const char *, const uint8_t *payload, unsigned int length)
+        {
+            Serial.println("Handshake ack");
+            string msg((char *)payload, length);
+            if (hs.handleResponsePayload(msg))
+            {
+                Serial.println("[HS] Handshake OK");
+            }
+            else
+            {
+                Serial.println("[HS] Handshake Failed");
+            }
+        });
 
-  randomSeed(ESP.getCycleCount());
-  pairing.begin();
-  mqtt.begin();
+    randomSeed(ESP.getCycleCount());
+    pairing.begin();
+    mqtt.begin();
 
-  SPI.begin(18, 19, 23); // SCK, MISO, MOSI
-  Wire.begin(I2C_SDA_PIN_ENTRY, I2C_SCL_PIN_ENTRY);
-  Wire1.begin(I2C_SDA_PIN_EXIT, I2C_SCL_PIN_EXIT);
+    SPI.begin(18, 19, 23); // SCK, MISO, MOSI
+    Wire.begin(I2C_SDA_PIN_ENTRY, I2C_SCL_PIN_ENTRY);
+    Wire1.begin(I2C_SDA_PIN_EXIT, I2C_SCL_PIN_EXIT);
 
-  entryOled.begin();
-  exitOled.begin();
+    entryOled.begin();
+    exitOled.begin();
 
-  entryScanner.setCallback(onCardScanned);
-  entryScanner.begin();
+    entryScanner.setCallback(onCardScanned);
+    entryScanner.begin();
 
-  exitScanner.setCallback(onCardScanned);
-  exitScanner.begin();
+    exitScanner.setCallback(onCardScanned);
+    exitScanner.begin();
 
-  entryServo.begin();
-  exitServo.begin();
+    entryServo.begin();
+    exitServo.begin();
 }
 
-void loop() {
-  mqtt.loop();
+void loop()
+{
+    mqtt.loop();
 
-  if (!wifi.connected())
-    return;
+    if (!wifi.connected())
+        return;
 
-  // Run pairing loop
-  pairing.loop();
+    unsigned long now = millis();
 
-  if (!pairing.isPaired())
-    return;
+    if (!hs.hasValidSession(std::time(nullptr)) &&
+        now - lastHandshakeMs > HANDSHAKE_INTERVAL)
+    {
 
-  entryScanner.loop();
-  exitScanner.loop();
-  entryOled.loop();
-  exitOled.loop();
-  entryServo.loop();
-  exitServo.loop();
+        Serial.println("[HS] Sending handshake...");
 
-  unsigned long now = millis();
+        NetworkInfo net = wifi.get();
+        std::string payload = hs.buildRequestPayload(
+            net.ssid.c_str(), net.subnetMask.c_str(), net.ip.toString().c_str());
 
-  if (!hs.hasValidSession(std::time(nullptr)) &&
-      now - lastHandshakeMs > HANDSHAKE_INTERVAL) {
+        mqtt.publish(HANDSHAKE_TOPIC_REQUEST, payload.c_str());
 
-    Serial.println("[HS] Sending handshake...");
+        lastHandshakeMs = now;
+        return;
+    };
 
-    NetworkInfo net = wifi.get();
-    std::string payload = hs.buildRequestPayload(
-        net.ssid.c_str(), net.subnetMask.c_str(), net.ip.toString().c_str());
+    // Run pairing loop
+    pairing.loop();
 
-    mqtt.publish(HANDSHAKE_TOPIC_REQUEST, payload.c_str());
+    if (!(deviceInfo.getPairing() == DevicePairState::PAIRED))
+        return;
 
-    lastHandshakeMs = now;
-    return;
-  };
-  // Heartbeat after handshake
-  if (hs.hasValidSession(std::time(nullptr)) &&
-      now - lastHeartbeatMs > HEARTBEAT_INTERVALS[currentHeartbeatIndex]) {
-    Serial.println("[Heartbeat] Sending...");
+    entryScanner.loop();
+    exitScanner.loop();
+    entryOled.loop();
+    exitOled.loop();
+    entryServo.loop();
+    exitServo.loop();
 
-    String topic = "iot/heartbeat/" + macStr;
-    StaticJsonDocument<128> doc;
+    // Heartbeat after handshake
+    if (hs.hasValidSession(std::time(nullptr)) &&
+        now - lastHeartbeatMs > HEARTBEAT_INTERVALS[currentHeartbeatIndex])
+    {
+        Serial.println("[Heartbeat] Sending...");
 
-    doc["mac"] = macStr.c_str();
+        String topic = "iot/heartbeat/" + macStr;
+        StaticJsonDocument<128> doc;
 
-    char buffer[128];
-    serializeJson(doc, buffer);
-    mqtt.publish(topic.c_str(), buffer);
+        doc["mac"] = macStr.c_str();
 
-    lastHeartbeatMs = now;
-    currentHeartbeatIndex = (currentHeartbeatIndex + 1) % 3;
-  };
+        char buffer[128];
+        serializeJson(doc, buffer);
+        mqtt.publish(topic.c_str(), buffer);
+
+        lastHeartbeatMs = now;
+        currentHeartbeatIndex = (currentHeartbeatIndex + 1) % 3;
+    };
 }

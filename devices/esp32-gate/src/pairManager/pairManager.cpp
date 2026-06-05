@@ -3,8 +3,8 @@
 #include <HTTPClient.h>
 #include "secrets.h"
 
-PairingHandler::PairingHandler(MqttConfig &mqttRef, const String &type, OledDisplay &entryOledRef, OledDisplay &exitOledRef)
-    : mqtt(mqttRef), deviceType(type), state(PairingState::BOOT), entryOled(entryOledRef), exitOled(exitOledRef)
+PairingHandler::PairingHandler(MqttConfig &mqttRef, DeviceInfo &deviceInfoRef, const String &type, OledDisplay &entryOledRef, OledDisplay &exitOledRef)
+    : mqtt(mqttRef), deviceInfo(deviceInfoRef), deviceType(type), entryOled(entryOledRef), exitOled(exitOledRef)
 {
     macAddress = String((uint32_t)ESP.getEfuseMac(), HEX);
     macAddress.toUpperCase();
@@ -12,17 +12,13 @@ PairingHandler::PairingHandler(MqttConfig &mqttRef, const String &type, OledDisp
 
 void PairingHandler::begin()
 {
-    prefs.begin("pairing", false);
-    pairToken = prefs.getString("token", "");
 
-    if (pairToken.length() > 0)
+    if (deviceInfo.getPairing() == DevicePairState::PAIRED)
     {
-        state = PairingState::ACTIVE;
-        Serial.println("[Pairing] Already paired with token: " + pairToken);
+        Serial.println("[Pairing] Already paired. Skipping pairing mode.");
     }
     else
     {
-        state = PairingState::PAIRING;
         generateSectionId();
         countdownSeconds = 300; // 5 minutes
         lastPublishMs = 0;
@@ -39,7 +35,7 @@ void PairingHandler::begin()
 
 void PairingHandler::loop()
 {
-    if (state != PairingState::PAIRING)
+    if (deviceInfo.getPairing() == DevicePairState::PAIRED)
         return;
 
     if (!mqtt.connected())
@@ -157,8 +153,7 @@ void PairingHandler::sendHttpConfirm(const String &objectId, const String &token
 
         // Save pair status and token to preferences
         pairToken = token;
-        prefs.putString("token", pairToken);
-        state = PairingState::ACTIVE;
+        deviceInfo.setPairing(DevicePairState::PAIRED);
 
         // Show Success screen on OLEDs
         entryOled.showMessage("PAIR SUCCESS", 2, true);

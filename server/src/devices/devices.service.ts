@@ -7,7 +7,12 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { Device, DeviceDocument, DeviceStatus, DevicePairState } from './schema/devices.schema';
+import {
+    Device,
+    DeviceDocument,
+    DeviceStatus,
+    DevicePairState,
+} from './schema/devices.schema';
 import { DBName } from 'src/utils/connectDB';
 import { Park, ParkDocument } from 'src/parks/schema/park.schema';
 import { MqttService } from 'src/mqtt/mqtt.service';
@@ -23,6 +28,12 @@ export class DevicesService {
         @Inject(forwardRef(() => MqttService))
         private readonly mqttService: MqttService,
     ) {}
+
+    private gateway: SocketGateway;
+
+    registerGateway(gateway: SocketGateway) {
+        this.gateway = gateway;
+    }
 
     // =========================
     // CREATE DEVICE
@@ -76,7 +87,7 @@ export class DevicesService {
 
         if (query.type) filter.type = query.type;
         if (query.status) filter.status = query.status;
-        
+
         if (query.search) {
             filter.$or = [
                 { deviceName: { $regex: query.search, $options: 'i' } },
@@ -284,27 +295,15 @@ export class DevicesService {
         }
     }
 
-    private gateway: SocketGateway;
-
-    registerGateway(gateway: SocketGateway) {
-        this.gateway = gateway;
-    }
-
     async registerPairRequest(mac: string, sectionId: string, type: string) {
         const macUpper = mac.toUpperCase();
         const pairTokenExpiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
-
         await this.deviceModel.findOneAndUpdate(
             { macAddress: macUpper },
             {
                 $setOnInsert: {
-                    macAddress: macUpper,
                     type: type,
                     status: DeviceStatus.INACTIVE,
-                    deviceName: `NEW_${type}_${macUpper.slice(-5)}`,
-                    hostname: `omnipark-${macUpper.replace(/:/g, '').toLowerCase()}`,
-                    localIp: '0.0.0.0',
-                    subnetMask: '255.255.255.0',
                 },
                 $set: {
                     pairToken: sectionId,
@@ -314,7 +313,6 @@ export class DevicesService {
                 },
             },
             {
-                upsert: true,
                 new: true,
             },
         );
@@ -364,7 +362,9 @@ export class DevicesService {
         });
 
         if (!device) {
-            throw new NotFoundException('Device not found, expired, or invalid token');
+            throw new NotFoundException(
+                'Device not found, expired, or invalid token',
+            );
         }
 
         let tenantCode = device.tenantCode;

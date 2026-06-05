@@ -22,6 +22,8 @@ export function AddDeviceModal({ isOpen, onClose, clusters }: AddDeviceModalProp
 	const [errorMsg, setErrorMsg] = React.useState("");
 	const [successMsg, setSuccessMsg] = React.useState("");
 
+	const [sectionId, setSectionId] = React.useState("");
+
 	// Emit request to refresh pairing list
 	const refreshList = React.useCallback(() => {
 		const socket = Socket.getInstant("");
@@ -78,7 +80,7 @@ export function AddDeviceModal({ isOpen, onClose, clusters }: AddDeviceModalProp
 		socket.emit("pair_device", {
 			macAddress: selectedDeviceMac,
 			objectId: selectedClusterId,
-			sectionId: device.pairToken,
+			sectionId,
 		});
 	};
 
@@ -179,7 +181,29 @@ export function AddDeviceModal({ isOpen, onClose, clusters }: AddDeviceModalProp
 											</div>
 											<div className="flex flex-col items-end gap-1">
 												<span className="bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400 px-2 py-0.5 rounded text-xs font-semibold">
-													Code: {dev.pairToken}
+													Code
+													{
+														<input
+															type="text"
+															value={sectionId}
+															onChange={(e) => {
+																const val = e.target.value.replace(
+																	/\D/g,
+																	"",
+																); // Remove non-digit characters
+																if (val.length <= 6) {
+																	setSectionId(val);
+																}
+															}}
+															className="ml-1 w-16 rounded border border-zinc-300 dark:border-zinc-700 bg-transparent px-1 py-0.5 text-xs text-center focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:focus:ring-indigo-400"
+															disabled={
+																isLoading ||
+																!selectedDeviceMac ===
+																	dev.macAddress
+															}
+															maxLength={6}
+														></input>
+													}
 												</span>
 												<span className="text-[10px] text-zinc-400">
 													Type: {dev.type}

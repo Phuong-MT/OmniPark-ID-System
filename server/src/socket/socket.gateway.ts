@@ -27,7 +27,8 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     constructor(
         @Inject(forwardRef(() => DevicesService))
         private readonly devicesService: DevicesService,
-    ) {
+    ) {}
+    afterInit() {
         this.devicesService.registerGateway(this);
     }
 
@@ -45,15 +46,16 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         try {
             const devices = await this.devicesService.getPairingDevices();
             client.emit('pairing_devices_list', devices);
-        } catch (error) {
-            client.emit('error', { message: error.message });
+        } catch (error: any) {
+            client.emit('error', { message: error?.message });
         }
     }
 
     @SubscribeMessage('pair_device')
     async handlePairDevice(
         @ConnectedSocket() client: Socket,
-        @MessageBody() data: { macAddress: string; objectId: string; sectionId: string },
+        @MessageBody()
+        data: { macAddress: string; objectId: string; sectionId: string },
     ) {
         this.logger.log(`Pairing request received: ${JSON.stringify(data)}`);
         try {
@@ -66,12 +68,13 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
                 macAddress: data.macAddress,
                 status: 'INITIATED',
             });
-        } catch (error) {
-            client.emit('error', { message: error.message });
+        } catch (error: any) {
+            client.emit('error', { message: error?.message });
         }
     }
 
     notifyPairSuccess(macAddress: string, device: any) {
+        console.log('Emitting pair_success event for', macAddress);
         this.server.emit('pair_success', { macAddress, device });
     }
 }
