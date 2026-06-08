@@ -27,6 +27,7 @@ describe('DevicesService', () => {
             save: jest.fn(),
             exists: jest.fn(),
             findOneAndUpdate: jest.fn(),
+            findOneAndDelete: jest.fn(),
             countDocuments: jest.fn(),
             updateOne: jest.fn(),
         };
@@ -237,6 +238,39 @@ describe('DevicesService', () => {
                 { $set: { 'cameraConfig.lastHealthAt': expect.any(Date) } },
             );
             expect(result).toEqual(mockCamera);
+        });
+
+        it('should delete a camera within the requested tenant', async () => {
+            const cameraId = new Types.ObjectId();
+            const tenantCode = new Types.ObjectId();
+            deviceModel.findOneAndDelete.mockReturnValue({
+                lean: jest.fn().mockResolvedValue({ _id: cameraId }),
+            });
+
+            const result = await service.deleteCamera(
+                cameraId.toString(),
+                tenantCode.toString(),
+            );
+
+            expect(deviceModel.findOneAndDelete).toHaveBeenCalledWith({
+                _id: new Types.ObjectId(cameraId.toString()),
+                type: { $in: [DeviceType.CAMERA_LRP, DeviceType.CAMERA_FACE] },
+                tenantCode: new Types.ObjectId(tenantCode.toString()),
+            });
+            expect(result).toEqual({ deleted: true, id: cameraId.toString() });
+        });
+
+        it('should reject deleting a camera outside the requested tenant', async () => {
+            deviceModel.findOneAndDelete.mockReturnValue({
+                lean: jest.fn().mockResolvedValue(null),
+            });
+
+            await expect(
+                service.deleteCamera(
+                    new Types.ObjectId().toString(),
+                    new Types.ObjectId().toString(),
+                ),
+            ).rejects.toThrow(NotFoundException);
         });
     });
 

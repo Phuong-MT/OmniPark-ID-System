@@ -258,6 +258,30 @@ export class DevicesService {
         return camera;
     }
 
+    async deleteCamera(id: string, tenantCode?: string) {
+        if (!Types.ObjectId.isValid(id)) {
+            throw new BadRequestException('Invalid camera ID format');
+        }
+
+        const filter: any = {
+            _id: new Types.ObjectId(id),
+            type: { $in: [DeviceType.CAMERA_LRP, DeviceType.CAMERA_FACE] },
+        };
+        if (tenantCode) {
+            if (!Types.ObjectId.isValid(tenantCode)) {
+                throw new BadRequestException('Invalid tenant ID format');
+            }
+            filter.tenantCode = new Types.ObjectId(tenantCode);
+        }
+
+        const camera = await this.deviceModel.findOneAndDelete(filter).lean();
+        if (!camera) {
+            throw new NotFoundException('Camera not found');
+        }
+
+        return { deleted: true, id };
+    }
+
     async getEdgeCameraConfig(query: {
         edgeNodeId?: string;
         parkId?: string;

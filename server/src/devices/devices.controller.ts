@@ -1,6 +1,7 @@
 import {
     Body,
     Controller,
+    Delete,
     Logger,
     Get,
     Param,
@@ -94,6 +95,17 @@ export class DevicesController {
         return this.devicesService.updateCamera(
             id,
             payload,
+            user.role === UserRole.SUPER_ADMIN ? undefined : user.tenantCode,
+        );
+    }
+
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+    @Delete('cameras/:id')
+    async deleteCamera(@Req() req, @Param('id') id: string) {
+        const user = req.user;
+        return this.devicesService.deleteCamera(
+            id,
             user.role === UserRole.SUPER_ADMIN ? undefined : user.tenantCode,
         );
     }

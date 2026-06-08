@@ -5,7 +5,18 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import api from "@/utils/api/axios";
-import { Camera, Loader2, Plus, Save, Search, SlidersHorizontal } from "lucide-react";
+import {
+	Activity,
+	Camera,
+	ChevronLeft,
+	ChevronRight,
+	Loader2,
+	Plus,
+	Save,
+	Search,
+	SlidersHorizontal,
+	Trash2,
+} from "lucide-react";
 
 type CameraDirection = "IN" | "OUT" | "BOTH";
 type CameraType = "CAMERA_LRP" | "CAMERA_FACE";
@@ -57,9 +68,41 @@ const emptyForm: CameraFormState = {
 	aiEnabled: true,
 };
 
+const PAGE_SIZE = 10;
+const HEALTHY_WITHIN_MS = 2 * 60 * 1000;
+
 function maskStreamUrl(url?: string) {
 	if (!url) return "No stream";
 	return url.replace(/(rtsp:\/\/)([^:@/]+):([^@/]+)@/i, "$1$2:***@");
+}
+
+function getHealthStatus(lastHealthAt?: string) {
+	if (!lastHealthAt) return { label: "No health data", healthy: false };
+	const elapsed = Date.now() - new Date(lastHealthAt).getTime();
+	return {
+		label: elapsed <= HEALTHY_WITHIN_MS ? "Online" : "Offline",
+		healthy: elapsed <= HEALTHY_WITHIN_MS,
+	};
+}
+
+function formatLastHealth(lastHealthAt?: string) {
+	if (!lastHealthAt) return "Never reported";
+	return new Intl.DateTimeFormat(undefined, {
+		dateStyle: "short",
+		timeStyle: "short",
+	}).format(new Date(lastHealthAt));
+}
+
+function getApiErrorMessage(error: unknown, fallback: string) {
+	if (
+		typeof error === "object" &&
+		error !== null &&
+		"response" in error
+	) {
+		const response = (error as { response?: { data?: { message?: string } } }).response;
+		if (response?.data?.message) return response.data.message;
+	}
+	return fallback;
 }
 
 export function CameraManagement({ currentUserRole }: { currentUserRole: string }) {
@@ -67,8 +110,11 @@ export function CameraManagement({ currentUserRole }: { currentUserRole: string 
 	const [parks, setParks] = React.useState<ParkOption[]>([]);
 	const [form, setForm] = React.useState<CameraFormState>(emptyForm);
 	const [editingId, setEditingId] = React.useState<string | null>(null);
+	const [deletingId, setDeletingId] = React.useState<string | null>(null);
 	const [parkFilter, setParkFilter] = React.useState("");
 	const [search, setSearch] = React.useState("");
+	const [page, setPage] = React.useState(1);
+	const [total, setTotal] = React.useState(0);
 	const [loading, setLoading] = React.useState(false);
 	const [saving, setSaving] = React.useState(false);
 	const [error, setError] = React.useState<string | null>(null);
@@ -79,22 +125,30 @@ export function CameraManagement({ currentUserRole }: { currentUserRole: string 
 		setLoading(true);
 		setError(null);
 		try {
-			const query = new URLSearchParams({ page: "1", limit: "50" });
+			const query = new URLSearchParams({
+				page: page.toString(),
+				limit: PAGE_SIZE.toString(),
+			});
 			if (parkFilter) query.append("parkId", parkFilter);
 			if (search) query.append("search", search);
 			const res = await api.get(`/devices/cameras?${query.toString()}`);
 			setCameras(res.data.data || []);
-		} catch (err: any) {
-			setError(err.response?.data?.message || "Failed to load cameras");
+			setTotal(res.data.total || 0);
+		} catch (error: unknown) {
+			setError(getApiErrorMessage(error, "Failed to load cameras"));
 		} finally {
 			setLoading(false);
 		}
-	}, [parkFilter, search]);
+	}, [page, parkFilter, search]);
 
 	React.useEffect(() => {
 		const timeoutId = setTimeout(loadCameras, 300);
 		return () => clearTimeout(timeoutId);
 	}, [loadCameras]);
+
+	React.useEffect(() => {
+		setPage(1);
+	}, [parkFilter, search]);
 
 	React.useEffect(() => {
 		let ignore = false;
@@ -160,12 +214,34 @@ export function CameraManagement({ currentUserRole }: { currentUserRole: string 
 
 			resetForm();
 			await loadCameras();
-		} catch (err: any) {
-			setError(err.response?.data?.message || "Failed to save camera");
+		} catch (error: unknown) {
+			setError(getApiErrorMessage(error, "Failed to save camera"));
 		} finally {
 			setSaving(false);
 		}
 	}
+
+	async function deleteCamera(camera: CameraItem) {
+		if (!window.confirm(`Delete camera "${camera.deviceName}"?`)) return;
+
+		setDeletingId(camera._id);
+		setError(null);
+		try {
+			await api.delete(`/devices/cameras/${camera._id}`);
+			if (editingId === camera._id) resetForm();
+			if (cameras.length === 1 && page > 1) {
+				setPage((current) => current - 1);
+			} else {
+				await loadCameras();
+			}
+		} catch (error: unknown) {
+			setError(getApiErrorMessage(error, "Failed to delete camera"));
+		} finally {
+			setDeletingId(null);
+		}
+	}
+
+	const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
 	return (
 		<Card>
@@ -219,11 +295,13 @@ export function CameraManagement({ currentUserRole }: { currentUserRole: string 
 							</tr>
 						</thead>
 						<tbody>
-							{cameras.map((camera) => (
-								<tr
-									key={camera._id}
-									className="border-b border-zinc-100 last:border-0 dark:border-zinc-800"
-								>
+							{cameras.map((camera) => {
+								const health = getHealthStatus(camera.cameraConfig?.lastHealthAt);
+								return (
+									<tr
+										key={camera._id}
+										className="border-b border-zinc-100 last:border-0 dark:border-zinc-800"
+									>
 									<td className="p-4">
 										<div className="font-medium text-zinc-950 dark:text-zinc-50">
 											{camera.deviceName}
@@ -253,21 +331,49 @@ export function CameraManagement({ currentUserRole }: { currentUserRole: string 
 										<div className="mt-1 text-xs text-zinc-500">
 											AI {camera.cameraConfig?.aiEnabled ? "on" : "off"}
 										</div>
+										<div
+											className="mt-2 flex items-center gap-1 text-xs text-zinc-500"
+											title={formatLastHealth(camera.cameraConfig?.lastHealthAt)}
+										>
+											<Activity
+												className={`h-3.5 w-3.5 ${
+													health.healthy ? "text-emerald-500" : "text-zinc-400"
+												}`}
+											/>
+											{health.label}
+										</div>
 									</td>
 									<td className="p-4 text-right">
-										<Button
-											type="button"
-											size="sm"
-											variant="outline"
-											disabled={!canManage}
-											onClick={() => startEdit(camera)}
-										>
-											<SlidersHorizontal className="mr-2 h-4 w-4" />
-											Edit
-										</Button>
+										<div className="flex justify-end gap-2">
+											<Button
+												type="button"
+												size="sm"
+												variant="outline"
+												disabled={!canManage}
+												onClick={() => startEdit(camera)}
+											>
+												<SlidersHorizontal className="mr-2 h-4 w-4" />
+												Edit
+											</Button>
+											<Button
+												type="button"
+												size="sm"
+												variant="destructive"
+												disabled={!canManage || deletingId === camera._id}
+												onClick={() => deleteCamera(camera)}
+											>
+												{deletingId === camera._id ? (
+													<Loader2 className="h-4 w-4 animate-spin" />
+												) : (
+													<Trash2 className="h-4 w-4" />
+												)}
+												<span className="sr-only">Delete camera</span>
+											</Button>
+										</div>
 									</td>
-								</tr>
-							))}
+									</tr>
+								);
+							})}
 						</tbody>
 					</table>
 					{loading && (
@@ -278,6 +384,35 @@ export function CameraManagement({ currentUserRole }: { currentUserRole: string 
 					{!loading && cameras.length === 0 && (
 						<div className="p-8 text-center text-sm text-zinc-500">
 							No cameras found.
+						</div>
+					)}
+					{total > 0 && (
+						<div className="flex items-center justify-between border-t border-zinc-200 px-4 py-3 text-sm dark:border-zinc-800">
+							<span className="text-zinc-500">
+								Page {page} of {pageCount} · {total} cameras
+							</span>
+							<div className="flex gap-2">
+								<Button
+									type="button"
+									size="sm"
+									variant="outline"
+									disabled={loading || page <= 1}
+									onClick={() => setPage((current) => current - 1)}
+								>
+									<ChevronLeft className="h-4 w-4" />
+									<span className="sr-only">Previous page</span>
+								</Button>
+								<Button
+									type="button"
+									size="sm"
+									variant="outline"
+									disabled={loading || page >= pageCount}
+									onClick={() => setPage((current) => current + 1)}
+								>
+									<ChevronRight className="h-4 w-4" />
+									<span className="sr-only">Next page</span>
+								</Button>
+							</div>
 						</div>
 					)}
 				</div>

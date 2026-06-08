@@ -19,6 +19,7 @@ describe('DevicesController', () => {
             findCameras: jest.fn(),
             createCamera: jest.fn(),
             updateCamera: jest.fn(),
+            deleteCamera: jest.fn(),
             handlePairRequest: jest.fn(),
             activateDevice: jest.fn(),
             updateHeartbeat: jest.fn(),
@@ -112,5 +113,22 @@ describe('DevicesController', () => {
             ...payload,
             tenantCode: 'tenant-from-park',
         });
+    });
+
+    it('should restrict camera deletion to the admin tenant', async () => {
+        await controller.deleteCamera(
+            {
+                user: {
+                    role: UserRole.ADMIN,
+                    tenantCode: 'tenant-1',
+                },
+            },
+            'camera-1',
+        );
+
+        expect(devicesService.deleteCamera).toHaveBeenCalledWith(
+            'camera-1',
+            'tenant-1',
+        );
     });
 });
