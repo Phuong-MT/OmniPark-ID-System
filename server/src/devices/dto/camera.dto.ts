@@ -1,4 +1,7 @@
 import {
+    ArrayMaxSize,
+    ArrayMinSize,
+    IsArray,
     IsBoolean,
     IsEnum,
     IsMongoId,
@@ -11,6 +14,29 @@ import {
     CameraStreamProtocol,
     DeviceType,
 } from '../schema/devices.schema';
+
+export class BulkCameraIdsDto {
+    @IsArray()
+    @ArrayMinSize(1)
+    @ArrayMaxSize(10)
+    @IsMongoId({ each: true })
+    ids: string[];
+}
+
+export class BulkUpdateCameraDto extends BulkCameraIdsDto {
+    @IsBoolean()
+    @IsOptional()
+    enabled?: boolean;
+
+    @IsBoolean()
+    @IsOptional()
+    aiEnabled?: boolean;
+
+    @IsString()
+    @IsNotEmpty()
+    @IsOptional()
+    edgeNodeId?: string;
+}
 
 export class CreateCameraDto {
     @IsString()

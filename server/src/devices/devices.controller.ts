@@ -23,7 +23,12 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../user/schema/user.schema';
 import { AssignmentsService } from '../assignments/assignments.service';
-import { CreateCameraDto, UpdateCameraDto } from './dto/camera.dto';
+import {
+    BulkCameraIdsDto,
+    BulkUpdateCameraDto,
+    CreateCameraDto,
+    UpdateCameraDto,
+} from './dto/camera.dto';
 
 @Controller('devices')
 export class DevicesController {
@@ -81,6 +86,28 @@ export class DevicesController {
                     ? payload.tenantCode
                     : user.tenantCode,
         });
+    }
+
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+    @Patch('cameras/bulk')
+    async bulkUpdateCameras(@Req() req, @Body() payload: BulkUpdateCameraDto) {
+        const user = req.user;
+        return this.devicesService.bulkUpdateCameras(
+            payload,
+            user.role === UserRole.SUPER_ADMIN ? undefined : user.tenantCode,
+        );
+    }
+
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+    @Delete('cameras/bulk')
+    async bulkDeleteCameras(@Req() req, @Body() payload: BulkCameraIdsDto) {
+        const user = req.user;
+        return this.devicesService.bulkDeleteCameras(
+            payload.ids,
+            user.role === UserRole.SUPER_ADMIN ? undefined : user.tenantCode,
+        );
     }
 
     @UseGuards(JwtAuthGuard, RolesGuard)

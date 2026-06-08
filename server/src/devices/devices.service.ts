@@ -15,7 +15,12 @@ import {
     DeviceType,
 } from './schema/devices.schema';
 import { DBName } from 'src/utils/connectDB';
-import { CreateCameraDto, EdgeCameraConfig, UpdateCameraDto } from './dto/camera.dto';
+import {
+    BulkUpdateCameraDto,
+    CreateCameraDto,
+    EdgeCameraConfig,
+    UpdateCameraDto,
+} from './dto/camera.dto';
 
 @Injectable()
 export class DevicesService {
@@ -258,6 +263,40 @@ export class DevicesService {
         return camera;
     }
 
+    async bulkUpdateCameras(payload: BulkUpdateCameraDto, tenantCode?: string) {
+        const filter = this.buildBulkCameraFilter(payload.ids, tenantCode);
+        const setPayload: Record<string, boolean | string> = {};
+
+        if (payload.enabled !== undefined) {
+            setPayload['cameraConfig.enabled'] = payload.enabled;
+        }
+        if (payload.aiEnabled !== undefined) {
+            setPayload['cameraConfig.aiEnabled'] = payload.aiEnabled;
+        }
+        if (payload.edgeNodeId !== undefined) {
+            setPayload['cameraConfig.edgeNodeId'] = payload.edgeNodeId;
+        }
+        if (Object.keys(setPayload).length === 0) {
+            throw new BadRequestException('At least one camera setting is required');
+        }
+
+        const result = await this.deviceModel.updateMany(filter, {
+            $set: setPayload,
+        });
+
+        return {
+            matched: result.matchedCount,
+            modified: result.modifiedCount,
+        };
+    }
+
+    async bulkDeleteCameras(ids: string[], tenantCode?: string) {
+        const result = await this.deviceModel.deleteMany(
+            this.buildBulkCameraFilter(ids, tenantCode),
+        );
+        return { deleted: result.deletedCount };
+    }
+
     async deleteCamera(id: string, tenantCode?: string) {
         if (!Types.ObjectId.isValid(id)) {
             throw new BadRequestException('Invalid camera ID format');
@@ -280,6 +319,24 @@ export class DevicesService {
         }
 
         return { deleted: true, id };
+    }
+
+    private buildBulkCameraFilter(ids: string[], tenantCode?: string) {
+        if (!ids.length || ids.length > 10 || ids.some((id) => !Types.ObjectId.isValid(id))) {
+            throw new BadRequestException('Invalid camera IDs');
+        }
+
+        const filter: any = {
+            _id: { $in: ids.map((id) => new Types.ObjectId(id)) },
+            type: { $in: [DeviceType.CAMERA_LRP, DeviceType.CAMERA_FACE] },
+        };
+        if (tenantCode) {
+            if (!Types.ObjectId.isValid(tenantCode)) {
+                throw new BadRequestException('Invalid tenant ID format');
+            }
+            filter.tenantCode = new Types.ObjectId(tenantCode);
+        }
+        return filter;
     }
 
     async getEdgeCameraConfig(query: {

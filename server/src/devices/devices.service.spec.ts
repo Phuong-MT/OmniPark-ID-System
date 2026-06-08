@@ -30,6 +30,8 @@ describe('DevicesService', () => {
             findOneAndDelete: jest.fn(),
             countDocuments: jest.fn(),
             updateOne: jest.fn(),
+            updateMany: jest.fn(),
+            deleteMany: jest.fn(),
         };
 
         const module: TestingModule = await Test.createTestingModule({
@@ -271,6 +273,82 @@ describe('DevicesService', () => {
                     new Types.ObjectId().toString(),
                 ),
             ).rejects.toThrow(NotFoundException);
+        });
+
+        it('should bulk update selected cameras within the requested tenant', async () => {
+            const cameraIds = [new Types.ObjectId(), new Types.ObjectId()];
+            const tenantCode = new Types.ObjectId();
+            deviceModel.updateMany.mockResolvedValue({
+                matchedCount: 2,
+                modifiedCount: 2,
+            });
+
+            const result = await service.bulkUpdateCameras(
+                {
+                    ids: cameraIds.map((id) => id.toString()),
+                    enabled: false,
+                    aiEnabled: false,
+                },
+                tenantCode.toString(),
+            );
+
+            expect(deviceModel.updateMany).toHaveBeenCalledWith(
+                {
+                    _id: { $in: cameraIds },
+                    type: { $in: [DeviceType.CAMERA_LRP, DeviceType.CAMERA_FACE] },
+                    tenantCode,
+                },
+                {
+                    $set: {
+                        'cameraConfig.enabled': false,
+                        'cameraConfig.aiEnabled': false,
+                    },
+                },
+            );
+            expect(result).toEqual({ matched: 2, modified: 2 });
+        });
+
+        it('should reject an empty bulk camera update', async () => {
+            await expect(
+                service.bulkUpdateCameras({
+                    ids: [new Types.ObjectId().toString()],
+                }),
+            ).rejects.toThrow(BadRequestException);
+        });
+
+        it('should reject bulk operations with more than 10 cameras', async () => {
+            const cameraIds = Array.from(
+                { length: 11 },
+                () => new Types.ObjectId().toString(),
+            );
+
+            await expect(
+                service.bulkUpdateCameras({
+                    ids: cameraIds,
+                    enabled: true,
+                }),
+            ).rejects.toThrow(BadRequestException);
+            await expect(service.bulkDeleteCameras(cameraIds)).rejects.toThrow(
+                BadRequestException,
+            );
+        });
+
+        it('should bulk delete only selected cameras within the requested tenant', async () => {
+            const cameraId = new Types.ObjectId();
+            const tenantCode = new Types.ObjectId();
+            deviceModel.deleteMany.mockResolvedValue({ deletedCount: 1 });
+
+            const result = await service.bulkDeleteCameras(
+                [cameraId.toString()],
+                tenantCode.toString(),
+            );
+
+            expect(deviceModel.deleteMany).toHaveBeenCalledWith({
+                _id: { $in: [cameraId] },
+                type: { $in: [DeviceType.CAMERA_LRP, DeviceType.CAMERA_FACE] },
+                tenantCode,
+            });
+            expect(result).toEqual({ deleted: 1 });
         });
     });
 

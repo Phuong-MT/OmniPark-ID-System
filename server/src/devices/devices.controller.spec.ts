@@ -19,6 +19,8 @@ describe('DevicesController', () => {
             findCameras: jest.fn(),
             createCamera: jest.fn(),
             updateCamera: jest.fn(),
+            bulkUpdateCameras: jest.fn(),
+            bulkDeleteCameras: jest.fn(),
             deleteCamera: jest.fn(),
             handlePairRequest: jest.fn(),
             activateDevice: jest.fn(),
@@ -128,6 +130,25 @@ describe('DevicesController', () => {
 
         expect(devicesService.deleteCamera).toHaveBeenCalledWith(
             'camera-1',
+            'tenant-1',
+        );
+    });
+
+    it('should restrict bulk camera updates to the admin tenant', async () => {
+        const payload = { ids: ['camera-1'], enabled: false };
+
+        await controller.bulkUpdateCameras(
+            {
+                user: {
+                    role: UserRole.ADMIN,
+                    tenantCode: 'tenant-1',
+                },
+            },
+            payload,
+        );
+
+        expect(devicesService.bulkUpdateCameras).toHaveBeenCalledWith(
+            payload,
             'tenant-1',
         );
     });

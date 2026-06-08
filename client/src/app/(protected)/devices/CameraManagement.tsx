@@ -7,15 +7,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import api from "@/utils/api/axios";
 import {
 	Activity,
+	Bot,
 	Camera,
 	ChevronLeft,
 	ChevronRight,
 	Loader2,
+	Network,
 	Plus,
+	Power,
 	Save,
 	Search,
 	SlidersHorizontal,
 	Trash2,
+	X,
 } from "lucide-react";
 
 type CameraDirection = "IN" | "OUT" | "BOTH";
@@ -69,6 +73,7 @@ const emptyForm: CameraFormState = {
 };
 
 const PAGE_SIZE = 10;
+const MAX_BULK_CAMERAS = 10;
 const HEALTHY_WITHIN_MS = 2 * 60 * 1000;
 
 function maskStreamUrl(url?: string) {
@@ -111,6 +116,9 @@ export function CameraManagement({ currentUserRole }: { currentUserRole: string 
 	const [form, setForm] = React.useState<CameraFormState>(emptyForm);
 	const [editingId, setEditingId] = React.useState<string | null>(null);
 	const [deletingId, setDeletingId] = React.useState<string | null>(null);
+	const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set());
+	const [bulkEdgeNodeId, setBulkEdgeNodeId] = React.useState("");
+	const [bulkBusy, setBulkBusy] = React.useState(false);
 	const [parkFilter, setParkFilter] = React.useState("");
 	const [search, setSearch] = React.useState("");
 	const [page, setPage] = React.useState(1);
@@ -228,6 +236,11 @@ export function CameraManagement({ currentUserRole }: { currentUserRole: string 
 		setError(null);
 		try {
 			await api.delete(`/devices/cameras/${camera._id}`);
+			setSelectedIds((current) => {
+				const next = new Set(current);
+				next.delete(camera._id);
+				return next;
+			});
 			if (editingId === camera._id) resetForm();
 			if (cameras.length === 1 && page > 1) {
 				setPage((current) => current - 1);
@@ -241,7 +254,87 @@ export function CameraManagement({ currentUserRole }: { currentUserRole: string 
 		}
 	}
 
+	function toggleCameraSelection(cameraId: string) {
+		setSelectedIds((current) => {
+			const next = new Set(current);
+			if (next.has(cameraId)) {
+				next.delete(cameraId);
+			} else if (next.size < MAX_BULK_CAMERAS) {
+				next.add(cameraId);
+			} else {
+				setError(`You can manage up to ${MAX_BULK_CAMERAS} cameras at once`);
+			}
+			return next;
+		});
+	}
+
+	function toggleCurrentPageSelection() {
+		const currentPageIds = cameras.map((camera) => camera._id);
+		const allCurrentSelected = currentPageIds.every((id) => selectedIds.has(id));
+
+		setSelectedIds((current) => {
+			const next = new Set(current);
+			if (allCurrentSelected) {
+				currentPageIds.forEach((id) => next.delete(id));
+			} else {
+				currentPageIds
+					.slice(0, Math.max(0, MAX_BULK_CAMERAS - next.size))
+					.forEach((id) => next.add(id));
+			}
+			return next;
+		});
+	}
+
+	async function bulkUpdateCameras(
+		settings: { enabled?: boolean; aiEnabled?: boolean; edgeNodeId?: string },
+	) {
+		if (selectedIds.size === 0) return;
+
+		setBulkBusy(true);
+		setError(null);
+		try {
+			await api.patch("/devices/cameras/bulk", {
+				ids: Array.from(selectedIds),
+				...settings,
+			});
+			setSelectedIds(new Set());
+			setBulkEdgeNodeId("");
+			await loadCameras();
+		} catch (error: unknown) {
+			setError(getApiErrorMessage(error, "Failed to update selected cameras"));
+		} finally {
+			setBulkBusy(false);
+		}
+	}
+
+	async function bulkDeleteCameras() {
+		if (
+			selectedIds.size === 0 ||
+			!window.confirm(`Delete ${selectedIds.size} selected cameras?`)
+		) {
+			return;
+		}
+
+		setBulkBusy(true);
+		setError(null);
+		try {
+			await api.delete("/devices/cameras/bulk", {
+				data: { ids: Array.from(selectedIds) },
+			});
+			if (editingId && selectedIds.has(editingId)) resetForm();
+			setSelectedIds(new Set());
+			setPage(1);
+			await loadCameras();
+		} catch (error: unknown) {
+			setError(getApiErrorMessage(error, "Failed to delete selected cameras"));
+		} finally {
+			setBulkBusy(false);
+		}
+	}
+
 	const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
+	const allCurrentPageSelected =
+		cameras.length > 0 && cameras.every((camera) => selectedIds.has(camera._id));
 
 	return (
 		<Card>
@@ -284,9 +377,108 @@ export function CameraManagement({ currentUserRole }: { currentUserRole: string 
 
 			<CardContent className="grid gap-6 p-4 lg:grid-cols-[minmax(0,1fr)_360px]">
 				<div className="overflow-auto rounded-md border border-zinc-200 dark:border-zinc-800">
+					{selectedIds.size > 0 && (
+						<div className="flex min-w-[900px] flex-wrap items-center gap-2 border-b border-zinc-200 bg-blue-50 px-4 py-3 dark:border-zinc-800 dark:bg-blue-950/30">
+							<div className="mr-auto text-sm font-medium text-blue-900 dark:text-blue-100">
+								{selectedIds.size} camera{selectedIds.size === 1 ? "" : "s"} selected
+							</div>
+							<Button
+								type="button"
+								size="sm"
+								variant="outline"
+								disabled={bulkBusy}
+								onClick={() => bulkUpdateCameras({ enabled: true })}
+							>
+								<Power className="mr-2 h-4 w-4" />
+								Enable
+							</Button>
+							<Button
+								type="button"
+								size="sm"
+								variant="outline"
+								disabled={bulkBusy}
+								onClick={() => bulkUpdateCameras({ enabled: false })}
+							>
+								<Power className="mr-2 h-4 w-4" />
+								Disable
+							</Button>
+							<Button
+								type="button"
+								size="sm"
+								variant="outline"
+								disabled={bulkBusy}
+								onClick={() => bulkUpdateCameras({ aiEnabled: true })}
+							>
+								<Bot className="mr-2 h-4 w-4" />
+								AI on
+							</Button>
+							<Button
+								type="button"
+								size="sm"
+								variant="outline"
+								disabled={bulkBusy}
+								onClick={() => bulkUpdateCameras({ aiEnabled: false })}
+							>
+								<Bot className="mr-2 h-4 w-4" />
+								AI off
+							</Button>
+							<input
+								className="h-8 w-36 rounded-md border border-zinc-200 bg-white px-2 text-xs dark:border-zinc-700 dark:bg-zinc-900"
+								placeholder="New edge node"
+								disabled={bulkBusy}
+								value={bulkEdgeNodeId}
+								onChange={(event) => setBulkEdgeNodeId(event.target.value)}
+							/>
+							<Button
+								type="button"
+								size="sm"
+								variant="outline"
+								disabled={bulkBusy || !bulkEdgeNodeId.trim()}
+								onClick={() =>
+									bulkUpdateCameras({ edgeNodeId: bulkEdgeNodeId.trim() })
+								}
+							>
+								<Network className="mr-2 h-4 w-4" />
+								Move
+							</Button>
+							<Button
+								type="button"
+								size="sm"
+								variant="destructive"
+								disabled={bulkBusy}
+								onClick={bulkDeleteCameras}
+							>
+								{bulkBusy ? (
+									<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+								) : (
+									<Trash2 className="mr-2 h-4 w-4" />
+								)}
+								Delete
+							</Button>
+							<Button
+								type="button"
+								size="sm"
+								variant="ghost"
+								disabled={bulkBusy}
+								onClick={() => setSelectedIds(new Set())}
+							>
+								<X className="h-4 w-4" />
+								<span className="sr-only">Clear selection</span>
+							</Button>
+						</div>
+					)}
 					<table className="w-full text-sm">
 						<thead className="border-b border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900/60">
 							<tr>
+								<th className="h-11 w-12 px-4 text-left">
+									<input
+										type="checkbox"
+										aria-label="Select cameras on current page"
+										disabled={!canManage || cameras.length === 0}
+										checked={allCurrentPageSelected}
+										onChange={toggleCurrentPageSelection}
+									/>
+								</th>
 								<th className="h-11 px-4 text-left font-medium text-zinc-500">Camera</th>
 								<th className="h-11 px-4 text-left font-medium text-zinc-500">Direction</th>
 								<th className="h-11 px-4 text-left font-medium text-zinc-500">Stream</th>
@@ -300,8 +492,19 @@ export function CameraManagement({ currentUserRole }: { currentUserRole: string 
 								return (
 									<tr
 										key={camera._id}
-										className="border-b border-zinc-100 last:border-0 dark:border-zinc-800"
+										className={`border-b border-zinc-100 last:border-0 dark:border-zinc-800 ${
+											selectedIds.has(camera._id) ? "bg-blue-50/60 dark:bg-blue-950/20" : ""
+										}`}
 									>
+									<td className="p-4">
+										<input
+											type="checkbox"
+											aria-label={`Select ${camera.deviceName}`}
+											disabled={!canManage}
+											checked={selectedIds.has(camera._id)}
+											onChange={() => toggleCameraSelection(camera._id)}
+										/>
+									</td>
 									<td className="p-4">
 										<div className="font-medium text-zinc-950 dark:text-zinc-50">
 											{camera.deviceName}
