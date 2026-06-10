@@ -222,9 +222,11 @@ void setup()
 
     // Initialize recursive mutex for thread-safe state & MQTT client access
     deviceStateMutex = xSemaphoreCreateRecursiveMutex();
-    if (deviceStateMutex == NULL)
+    while (!deviceStateMutex)
     {
-        Serial.println("Failed to create deviceStateMutex!");
+        Serial.println("Failed to create mutex, retrying...");
+        delay(1000);
+        deviceStateMutex = xSemaphoreCreateRecursiveMutex();
     }
 
     // Create FreeRTOS task for background Handshake and Heartbeat operations
