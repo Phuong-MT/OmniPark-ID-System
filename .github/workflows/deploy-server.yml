@@ -137,11 +137,18 @@ jobs:
             PORT="${{ secrets.SERVER_PORT || '3000' }}"
             sed -i "s/SERVER_PORT/${PORT}/g" nginx/nginx.conf
 
+            # Ensure standard binary directories are in PATH (needed for non-interactive SSH)
+            export PATH="/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
+
             # Detect docker-compose vs docker compose
             if command -v docker-compose >/dev/null 2>&1; then
               COMPOSE_CMD="docker-compose"
-            else
+            elif docker compose version >/dev/null 2>&1; then
               COMPOSE_CMD="docker compose"
+            else
+              echo "❌ Error: Neither 'docker-compose' nor 'docker compose' is available/working on the VPS."
+              echo "Please install docker-compose (V1) or the docker-compose-plugin (V2) on the VPS."
+              exit 1
             fi
 
             # Pull latest images & rebuild
