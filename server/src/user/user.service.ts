@@ -11,7 +11,7 @@ export class UserService {
     constructor(
         @InjectModel(User.name, DBName.omniparkIDSystem)
         private readonly userModel: Model<UserDocument>,
-    ) { }
+    ) {}
 
     async findByUsername(
         username: string,
@@ -24,13 +24,26 @@ export class UserService {
         return this.userModel.findOne(query).exec();
     }
 
-    async create(dto: InviteUserDto, tenantCode: string): Promise<UserDocument> {
-        const existingUsername = await this.userModel.findOne({ username: dto.username, tenantCode: new Types.ObjectId(tenantCode) }).exec();
+    async create(
+        dto: InviteUserDto,
+        tenantCode: string,
+    ): Promise<UserDocument> {
+        const existingUsername = await this.userModel
+            .findOne({
+                username: dto.username,
+                tenantCode: new Types.ObjectId(tenantCode),
+            })
+            .exec();
         if (existingUsername) {
             throw new ConflictException('Username already exists');
         }
 
-        const existingEmail = await this.userModel.findOne({ email: dto.email, tenantCode: new Types.ObjectId(tenantCode) }).exec();
+        const existingEmail = await this.userModel
+            .findOne({
+                email: dto.email,
+                tenantCode: new Types.ObjectId(tenantCode),
+            })
+            .exec();
         if (existingEmail) {
             throw new ConflictException('Email already exists');
         }
@@ -57,27 +70,42 @@ export class UserService {
         return this.userModel.findOne({ email }).exec();
     }
 
-    async saveVerificationCode(userId: string, code: string, expiresAt: Date): Promise<void> {
-        await this.userModel.findByIdAndUpdate(userId, {
-            verificationCode: code,
-            verificationCodeExpiresAt: expiresAt,
-        }).exec();
+    async saveVerificationCode(
+        userId: string,
+        code: string,
+        expiresAt: Date,
+    ): Promise<void> {
+        await this.userModel
+            .findByIdAndUpdate(userId, {
+                verificationCode: code,
+                verificationCodeExpiresAt: expiresAt,
+            })
+            .exec();
     }
 
     async clearVerificationCode(userId: string): Promise<void> {
-        await this.userModel.findByIdAndUpdate(userId, {
-            $unset: { verificationCode: 1, verificationCodeExpiresAt: 1 },
-        }).exec();
+        await this.userModel
+            .findByIdAndUpdate(userId, {
+                $unset: { verificationCode: 1, verificationCodeExpiresAt: 1 },
+            })
+            .exec();
     }
 
     async updatePassword(userId: string, passwordHash: string): Promise<void> {
-        await this.userModel.findByIdAndUpdate(userId, {
-            passwordHash,
-        }).exec();
+        await this.userModel
+            .findByIdAndUpdate(userId, {
+                passwordHash,
+            })
+            .exec();
     }
 
-    async updateProfile(userId: string, data: { username?: string }): Promise<UserDocument | null> {
-        return this.userModel.findByIdAndUpdate(userId, { $set: data }, { new: true }).exec();
+    async updateProfile(
+        userId: string,
+        data: { username?: string },
+    ): Promise<UserDocument | null> {
+        return this.userModel
+            .findByIdAndUpdate(userId, { $set: data }, { new: true })
+            .exec();
     }
 
     async findAll(
@@ -87,8 +115,8 @@ export class UserService {
         tenantCode?: string,
         currentUserRole?: string,
         currentUserTenantId?: string,
-        search?: string
-    ): Promise<{ users: UserDocument[], total: number }> {
+        search?: string,
+    ): Promise<{ users: UserDocument[]; total: number }> {
         const query: any = {};
 
         if (role) {
@@ -120,9 +148,7 @@ export class UserService {
                     from: 'tenants',
                     localField: 'tenantCode',
                     foreignField: '_id',
-                    pipeline: [
-                        { $project: { name: 1, status: 1 } },
-                    ],
+                    pipeline: [{ $project: { name: 1, status: 1 } }],
                     as: 'tenant',
                 },
             },

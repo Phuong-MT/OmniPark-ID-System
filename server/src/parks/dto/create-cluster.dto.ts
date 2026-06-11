@@ -1,4 +1,10 @@
-import { IsString, IsNotEmpty, IsObject, IsOptional, IsNumber } from 'class-validator';
+import {
+    IsString,
+    IsNotEmpty,
+    IsObject,
+    IsOptional,
+    IsNumber,
+} from 'class-validator';
 
 export class ClusterPositionDto {
     @IsNumber()

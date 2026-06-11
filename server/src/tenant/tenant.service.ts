@@ -13,7 +13,9 @@ export class TenantService {
     ) {}
 
     async create(createTenantDto: CreateTenantDto): Promise<Tenant> {
-        const existingTenant = await this.tenantModel.findOne({ name: createTenantDto.name }).exec();
+        const existingTenant = await this.tenantModel
+            .findOne({ name: createTenantDto.name })
+            .exec();
         if (existingTenant) {
             throw new ForbiddenException('Tenant name already exists');
         }
