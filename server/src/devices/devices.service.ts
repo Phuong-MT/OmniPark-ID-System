@@ -12,6 +12,7 @@ import {
     DeviceDocument,
     DeviceStatus,
     DevicePairState,
+    DeviceType,
 } from './schema/devices.schema';
 import { DBName } from 'src/utils/connectDB';
 import { Park, ParkDocument } from 'src/parks/schema/park.schema';
@@ -41,7 +42,7 @@ export class DevicesService {
     async createDevice(payload: {
         deviceId: string;
         macAddress: string;
-        type: string;
+        type: DeviceType;
         tenantCode: string;
         rootKeyHash: string;
         firmwareVersion?: string;
