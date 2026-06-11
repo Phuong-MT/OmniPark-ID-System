@@ -86,25 +86,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Generate server .env file
-        run: |
-          cat > server/.env << 'ENVEOF'
-          MQTT_BROKER_URL=${{ secrets.MQTT_BROKER_URL || 'mqtt://mosquitto:1883' }}
-          MONGO_URI_OMNIPARK_ID_SYSTEM=${{ secrets.MONGO_URI_OMNIPARK_ID_SYSTEM }}
-          JWT_SECRET=${{ secrets.JWT_SECRET }}
-          JWT_REFRESH_SECRET=${{ secrets.JWT_REFRESH_SECRET }}
-          PORT=${{ secrets.SERVER_PORT || '3000' }}
-          BREVO_SMTP_HOST=${{ secrets.BREVO_SMTP_HOST }}
-          BREVO_SMTP_PORT=${{ secrets.BREVO_SMTP_PORT || '587' }}
-          BREVO_SMTP_USER=${{ secrets.BREVO_SMTP_USER }}
-          BREVO_SMTP_PASS=${{ secrets.BREVO_SMTP_PASS }}
-          MAIL_FROM_ADDRESS=${{ secrets.MAIL_FROM_ADDRESS }}
-          MAIL_FROM_NAME=${{ secrets.MAIL_FROM_NAME || 'OmniPark ID System' }}
-          CLOUDINARY_CLOUD_NAME=${{ secrets.CLOUDINARY_CLOUD_NAME }}
-          CLOUDINARY_API_KEY=${{ secrets.CLOUDINARY_API_KEY }}
-          CLOUDINARY_API_SECRET=${{ secrets.CLOUDINARY_API_SECRET }}
-          ENVEOF
-
       - name: Copy project files to VPS
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -125,6 +106,27 @@ jobs:
           port: ${{ secrets.VPS_SSH_PORT || 22 }}
           script: |
             cd /opt/omnipark-id-system
+
+            # Create the server .env file directly on VPS
+            cat > server/.env << 'ENVEOF'
+            MQTT_BROKER_URL=${{ secrets.MQTT_BROKER_URL || 'mqtt://mosquitto:1883' }}
+            MONGO_URI_OMNIPARK_ID_SYSTEM=${{ secrets.MONGO_URI_OMNIPARK_ID_SYSTEM }}
+            JWT_SECRET=${{ secrets.JWT_SECRET }}
+            JWT_REFRESH_SECRET=${{ secrets.JWT_REFRESH_SECRET }}
+            PORT=${{ secrets.SERVER_PORT || '3000' }}
+            BREVO_SMTP_HOST=${{ secrets.BREVO_SMTP_HOST }}
+            BREVO_SMTP_PORT=${{ secrets.BREVO_SMTP_PORT || '587' }}
+            BREVO_SMTP_USER=${{ secrets.BREVO_SMTP_USER }}
+            BREVO_SMTP_PASS=${{ secrets.BREVO_SMTP_PASS }}
+            MAIL_FROM_ADDRESS=${{ secrets.MAIL_FROM_ADDRESS }}
+            MAIL_FROM_NAME=${{ secrets.MAIL_FROM_NAME || 'OmniPark ID System' }}
+            CLOUDINARY_CLOUD_NAME=${{ secrets.CLOUDINARY_CLOUD_NAME }}
+            CLOUDINARY_API_KEY=${{ secrets.CLOUDINARY_API_KEY }}
+            CLOUDINARY_API_SECRET=${{ secrets.CLOUDINARY_API_SECRET }}
+            ENVEOF
+
+            # Create root .env file for docker compose variables
+            echo "SERVER_PORT=${{ secrets.SERVER_PORT || '3000' }}" > .env
 
             # Inject server port into nginx config
             PORT="${{ secrets.SERVER_PORT || '3000' }}"
