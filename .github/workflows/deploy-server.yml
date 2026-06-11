@@ -44,6 +44,10 @@ on:
     branches: [master]
     paths:
       - "server/**"
+      - "mosquitto/**"
+      - "nginx/**"
+      - "docker-compose.yml"
+      - ".github/workflows/deploy-server.yml"
   workflow_dispatch:
 
 jobs:
