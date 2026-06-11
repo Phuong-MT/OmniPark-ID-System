@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from src.api.events import router as events_router
 from src.services.backend_client import fetch_cameras_config
 from src.services.camera_registry import CameraRegistry
+from src.services.event_store import EventStore
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -22,20 +23,27 @@ camera_registry = CameraRegistry(
     refresh_interval_seconds=CAMERA_REFRESH_INTERVAL_SECONDS,
 )
 
+event_store = EventStore()
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("Starting edge-api camera registry")
+    logger.info("Starting edge-api camera registry and event store")
     stop_event = asyncio.Event()
     await camera_registry.refresh()
     refresh_task = asyncio.create_task(camera_registry.run(stop_event))
     app.state.camera_registry = camera_registry
 
+    # Start SQLite event store sync task
+    await event_store.init_db()
+    sync_task = asyncio.create_task(event_store.sync_loop(stop_event))
+    app.state.event_store = event_store
+
     yield
 
-    logger.info("Shutting down edge-api camera registry")
+    logger.info("Shutting down edge-api camera registry and event store")
     stop_event.set()
-    await refresh_task
+    await asyncio.gather(refresh_task, sync_task, return_exceptions=True)
 
 
 app = FastAPI(
@@ -65,6 +73,23 @@ async def get_status():
 @app.get("/cameras")
 async def get_cameras():
     return await camera_registry.list_cameras()
+
+
+@app.post("/cameras/{camera_id}/status")
+async def update_camera_status(camera_id: str, payload: dict):
+    status = payload.get("status", "UNKNOWN")
+    error_message = payload.get("error_message")
+    await camera_registry.update_camera_status(camera_id, status, error_message)
+    
+    # Broadcast to local websocket clients
+    from src.api.events import manager
+    await manager.broadcast({
+        "type": "CAMERA_STATUS_CHANGED",
+        "camera_id": camera_id,
+        "status": status,
+        "error_message": error_message
+    })
+    return {"status": "updated"}
 
 
 @app.post("/cameras/refresh")

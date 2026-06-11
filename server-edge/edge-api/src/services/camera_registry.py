@@ -19,6 +19,7 @@ class CameraRegistry:
         self._fetcher = fetcher
         self._refresh_interval_seconds = refresh_interval_seconds
         self._cameras: dict[str, CameraConfig] = {}
+        self._statuses: dict[str, dict] = {}
         self._revision = ""
         self._last_sync_at: datetime | None = None
         self._last_error: str | None = None
@@ -69,12 +70,26 @@ class CameraRegistry:
             except asyncio.TimeoutError:
                 continue
 
+    async def update_camera_status(self, camera_id: str, status: str, error_message: str | None = None) -> None:
+        async with self._lock:
+            self._statuses[camera_id] = {
+                "status": status,
+                "last_update": datetime.now(timezone.utc).isoformat(),
+                "error_message": error_message,
+            }
+
     async def list_cameras(self) -> list[dict]:
         async with self._lock:
-            return [
-                camera.model_dump(mode="json")
-                for camera in sorted(self._cameras.values(), key=lambda item: item.id)
-            ]
+            result = []
+            for camera in sorted(self._cameras.values(), key=lambda item: item.id):
+                data = camera.model_dump(mode="json")
+                data["status"] = self._statuses.get(camera.id, {
+                    "status": "UNKNOWN",
+                    "last_update": None,
+                    "error_message": None
+                })
+                result.append(data)
+            return result
 
     async def status(self) -> dict:
         async with self._lock:

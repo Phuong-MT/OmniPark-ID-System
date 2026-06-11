@@ -8,6 +8,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from src.cameras.supervisor import CameraSupervisor
 from src.cameras.worker import process_camera_stream
 from src.engine.yolo_pipeline import YoloPipelineEngine
+from src.engine.batch_engine import AsyncBatchInferenceEngine
 from src.events.dispatcher import EventDispatcher
 
 logging.basicConfig(
@@ -36,12 +37,16 @@ async def main():
         plate_model_path=PLATE_MODEL_PATH,
     )
 
+    batch_engine = AsyncBatchInferenceEngine(engine)
+    batch_engine.start()
+
     dispatcher = EventDispatcher()
-    frame_interval = 1.0 / max(TARGET_FPS, 1)
     stop_event = asyncio.Event()
 
     async def worker_factory(camera: dict):
-        await process_camera_stream(camera, engine, dispatcher, frame_interval)
+        cam_fps = int(camera.get("fps")) if camera.get("fps") is not None else TARGET_FPS
+        cam_frame_interval = 1.0 / max(cam_fps, 1)
+        await process_camera_stream(camera, batch_engine, dispatcher, cam_frame_interval)
 
     supervisor = CameraSupervisor(
         edge_api_url=EDGE_API_URL,
@@ -56,6 +61,7 @@ async def main():
     finally:
         stop_event.set()
         await supervisor.stop()
+        await batch_engine.stop()
         await dispatcher.close()
 
 

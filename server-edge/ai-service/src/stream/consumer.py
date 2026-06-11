@@ -9,6 +9,9 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
+# Configure RTSP to use TCP for OpenCV video capture to prevent frame dropping over UDP
+os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;tcp"
+
 RECONNECT_DELAY_SECONDS = float(os.getenv("STREAM_RECONNECT_DELAY_SECONDS", "3"))
 STREAM_OPEN_TIMEOUT_MS = int(os.getenv("STREAM_OPEN_TIMEOUT_MS", "5000"))
 STREAM_READ_TIMEOUT_MS = int(os.getenv("STREAM_READ_TIMEOUT_MS", "5000"))
@@ -36,6 +39,11 @@ class StreamConsumer:
         self.is_http = url.startswith("http://") or url.startswith("https://")
         self.http_stream = None
         self.bytes_buffer = bytes()
+
+    def is_connected(self) -> bool:
+        if self.is_http:
+            return self.http_stream is not None
+        return self.cap is not None and self.cap.isOpened()
 
     def connect(self):
         logger.info("Connecting to stream at %s", redact_stream_url(self.url))
@@ -75,7 +83,6 @@ class StreamConsumer:
         if self.is_http:
             if self.http_stream is None:
                 if not self.connect():
-                    time.sleep(RECONNECT_DELAY_SECONDS)
                     return None
             
             try:
@@ -96,7 +103,6 @@ class StreamConsumer:
         else:
             if not self.cap or not self.cap.isOpened():
                 if not self.connect():
-                    time.sleep(RECONNECT_DELAY_SECONDS)
                     return None
 
             ret, frame = self.cap.read()

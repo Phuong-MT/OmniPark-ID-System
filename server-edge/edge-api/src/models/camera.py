@@ -10,6 +10,8 @@ class CameraConfig(BaseModel):
     parkId: Optional[str] = None
     clusterId: Optional[str] = None
     type: Optional[str] = None
+    fps: Optional[int] = None
+    confidence_threshold: Optional[float] = None
 
     @field_validator("url")
     @classmethod

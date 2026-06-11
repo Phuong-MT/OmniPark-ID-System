@@ -38,6 +38,13 @@ class CameraRegistryTests(unittest.IsolatedAsyncioTestCase):
                     "parkId": None,
                     "clusterId": None,
                     "type": None,
+                    "fps": None,
+                    "confidence_threshold": None,
+                    "status": {
+                        "status": "UNKNOWN",
+                        "last_update": None,
+                        "error_message": None,
+                    },
                 }
             ],
         )
@@ -60,6 +67,24 @@ class CameraRegistryTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(changed)
         self.assertEqual(len(cameras), 1)
         self.assertEqual(status["last_error"], "backend unavailable")
+
+    async def test_camera_status_is_merged_and_updated(self):
+        fetcher = AsyncMock(
+            return_value=[{"id": "cam-1", "url": "rtsp://camera/stream"}]
+        )
+        registry = CameraRegistry(fetcher)
+        await registry.refresh()
+
+        # Check default status
+        cameras = await registry.list_cameras()
+        self.assertEqual(cameras[0]["status"]["status"], "UNKNOWN")
+
+        # Update status
+        await registry.update_camera_status("cam-1", "CONNECTED", "No error")
+        cameras = await registry.list_cameras()
+        self.assertEqual(cameras[0]["status"]["status"], "CONNECTED")
+        self.assertEqual(cameras[0]["status"]["error_message"], "No error")
+        self.assertIsNotNone(cameras[0]["status"]["last_update"])
 
     async def test_run_refreshes_until_stopped(self):
         fetcher = AsyncMock(return_value=[])

@@ -1,5 +1,5 @@
 import logging
-from fastapi import APIRouter, BackgroundTasks, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, BackgroundTasks, WebSocket, WebSocketDisconnect, Request
 from typing import List
 
 from src.models.event import EdgeEvent
@@ -33,8 +33,32 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 
+
+async def handle_event_forwarding(event: EdgeEvent, event_store):
+    """
+    Check for pending events to preserve order, try immediate forward, or save to SQLite on failure.
+    """
+    try:
+        pending_count = await event_store.get_pending_count()
+        if pending_count > 0:
+            logger.info(f"Pending offline events found ({pending_count}). Queueing event {event.event_id} to preserve chronological order.")
+            await event_store.add_event(event)
+            return
+
+        success = await forward_event_to_backend(event)
+        if not success:
+            logger.warning(f"Immediate forwarding failed for event {event.event_id}. Saving to local SQLite database.")
+            await event_store.add_event(event)
+    except Exception as e:
+        logger.exception(f"Error handling event forwarding: {e}")
+        try:
+            await event_store.add_event(event)
+        except Exception:
+            logger.exception("Failed to write event to offline storage")
+
+
 @router.post("/", status_code=202)
-async def receive_event(event: EdgeEvent, background_tasks: BackgroundTasks):
+async def receive_event(event: EdgeEvent, request: Request, background_tasks: BackgroundTasks):
     """
     Receive event from the local AI service.
     """
@@ -43,10 +67,12 @@ async def receive_event(event: EdgeEvent, background_tasks: BackgroundTasks):
     # Broadcast to local websocket clients
     background_tasks.add_task(manager.broadcast, event.model_dump(mode="json"))
     
-    # Forward to central backend
-    background_tasks.add_task(forward_event_to_backend, event)
+    # Forward to central backend with local offline buffer handling
+    event_store = request.app.state.event_store
+    background_tasks.add_task(handle_event_forwarding, event, event_store)
     
     return {"status": "accepted", "event_id": event.event_id}
+
 
 @router.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
