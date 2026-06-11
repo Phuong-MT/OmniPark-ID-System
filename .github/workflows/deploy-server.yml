@@ -99,7 +99,7 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_SSH_PORT || 22 }}
           source: "server/,mosquitto/,nginx/,docker-compose.yml"
-          target: /opt/omnipark-id-system
+          target: ~/omnipark-id-system
           overwrite: true
 
       - name: Deploy via Docker Compose on VPS
@@ -110,7 +110,7 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_SSH_PORT || 22 }}
           script: |
-            cd /opt/omnipark-id-system
+            cd ~/omnipark-id-system
 
             # Create the server .env file directly on VPS
             cat > server/.env << 'ENVEOF'
