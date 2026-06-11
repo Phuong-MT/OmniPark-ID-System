@@ -1,9 +1,9 @@
 #include "OledDisplay.h"
 
-OledDisplay::OledDisplay(GateType type, TwoWire *wireBus, uint8_t address, uint8_t width, uint8_t height)
-    : _gateType(type), _wireBus(wireBus), _address(address), _display(width, height, wireBus, -1), _displayClearMs(0)
-{
-}
+OledDisplay::OledDisplay(GateType type, TwoWire *wireBus, uint8_t address,
+                         uint8_t width, uint8_t height)
+    : _gateType(type), _wireBus(wireBus), _address(address),
+      _display(width, height, wireBus, -1), _displayClearMs(0) {}
 
 bool OledDisplay::begin()
 {
@@ -50,12 +50,14 @@ void OledDisplay::centerText(const String &text, int16_t y, uint8_t textSize)
     _display.print(text);
 }
 
-void OledDisplay::showMessage(const String &msg, uint8_t textSize, bool clearScreen)
+void OledDisplay::showMessage(const String &msg, uint8_t textSize,
+                              bool clearScreen)
 {
     if (clearScreen)
     {
         _display.clearDisplay();
-        String gateName = (_gateType == GateType::ENTRY) ? "ENTRY GATE" : "EXIT GATE";
+        String gateName =
+            (_gateType == GateType::ENTRY) ? "ENTRY GATE" : "EXIT GATE";
         drawHeader(gateName);
     }
 
@@ -104,4 +106,21 @@ void OledDisplay::showGreeting(const String &cardId)
     _display.display();
 
     _displayClearMs = millis() + 3000;
+}
+
+void OledDisplay::showPairing(const String &macAddress, const String &sectionId, int countdownSeconds)
+{
+    _display.clearDisplay();
+    drawHeader("PAIR DEVICES");
+
+    centerText("OMNIPARK - " + macAddress, 22, 1);
+    centerText("Sec ID: " + sectionId, 36, 1);
+
+    int mins = countdownSeconds / 60;
+    int secs = countdownSeconds % 60;
+    char timerStr[16];
+    sprintf(timerStr, "Expires: %02d:%02d", mins, secs);
+    centerText(timerStr, 50, 1);
+
+    _display.display();
 }

@@ -1,129 +1,175 @@
 #include "pairManager.h"
 #include <ArduinoJson.h>
+#include <HTTPClient.h>
+#include "secrets.h"
 
-PairingHandler::PairingHandler(MqttConfig& mqttRef, const String& type, const String& code)
-    : mqtt(mqttRef), deviceType(type), tenantCode(code), state(PairingState::BOOT) {
-    macAddress = WiFi.macAddress();
+PairingHandler::PairingHandler(MqttConfig &mqttRef, DeviceInfo &deviceInfoRef, const String &type, OledDisplay &entryOledRef, OledDisplay &exitOledRef)
+    : mqtt(mqttRef), deviceInfo(deviceInfoRef), deviceType(type), entryOled(entryOledRef), exitOled(exitOledRef)
+{
+    macAddress = String((uint32_t)ESP.getEfuseMac(), HEX);
     macAddress.toUpperCase();
 }
 
-void PairingHandler::begin() {
-    prefs.begin("pairing", false);
-    pairToken = prefs.getString("token", "");
+void PairingHandler::begin()
+{
 
-    if (pairToken.length() > 0) {
-        state = PairingState::ACTIVE;
-        Serial.println("[Pairing] Already paired with token: " + pairToken);
-    } else {
-        state = PairingState::DISCOVERING;
-        Serial.println("[Pairing] Not paired. Starting discovery...");
+    if (deviceInfo.getPairing() == DevicePairState::PAIRED)
+    {
+        Serial.println("[Pairing] Already paired. Skipping pairing mode.");
+    }
+    else
+    {
+        generateSectionId();
+        countdownSeconds = 300; // 5 minutes
+        lastPublishMs = 0;
+        lastCountdownUpdateMs = millis();
+        Serial.println("[Pairing] Not paired. Starting pairing mode...");
+        Serial.println("[Pairing] Session ID: " + sectionId);
     }
 
-    // Register MQTT handlers
-    String tokenTopic = "iot/" + tenantCode + "/" + deviceType + "/" + macAddress + "/pair-token";
-    mqtt.registerHandler(tokenTopic.c_str(), [this](const char* t, const uint8_t* p, unsigned int l) {
-        this->handlePairToken(t, p, l);
-    });
-
-    String statusTopic = "iot/" + tenantCode + "/" + deviceType + "/" + macAddress + "/pair-status";
-    mqtt.registerHandler(statusTopic.c_str(), [this](const char* t, const uint8_t* p, unsigned int l) {
-        this->handlePairStatus(t, p, l);
-    });
-
-    udp.begin(UDP_PORT);
+    // Register MQTT handler for pairing confirmation from the server
+    String confirmTopic = "iot/device/" + macAddress + "/pair-confirm";
+    mqtt.registerHandler(confirmTopic.c_str(), [this](const char *t, const uint8_t *p, unsigned int l)
+                         { this->handlePairConfirm(t, p, l); });
 }
 
-void PairingHandler::loop() {
-    if (state == PairingState::DISCOVERING) {
-        sendDiscoveryBroadcast();
-    } else if (state == PairingState::ACTIVE && deviceType == "GATE") {
-        listenForDiscovery();
+void PairingHandler::loop()
+{
+    if (deviceInfo.getPairing() == DevicePairState::PAIRED)
+        return;
+
+    if (!mqtt.connected())
+        return;
+
+    unsigned long now = millis();
+
+    // Publish/refresh pairing request every 60 seconds (or immediately on startup)
+    if (lastPublishMs == 0 || now - lastPublishMs >= 60000)
+    {
+        publishPairRequest();
     }
-}
 
-void PairingHandler::sendDiscoveryBroadcast() {
-    if (millis() - lastBroadcastMs < 5000) return;
-    lastBroadcastMs = millis();
+    // Update countdown and OLED displays every 1 second
+    if (now - lastCountdownUpdateMs >= 1000)
+    {
+        lastCountdownUpdateMs = now;
+        countdownSeconds--;
 
-    Serial.println("[Pairing] Sending discovery broadcast...");
-    
-    StaticJsonDocument<128> doc;
-    doc["mac"] = macAddress;
-    doc["type"] = deviceType;
-    
-    char buffer[128];
-    serializeJson(doc, buffer);
+        entryOled.showPairing(macAddress, sectionId, countdownSeconds);
+        exitOled.showPairing(macAddress, sectionId, countdownSeconds);
 
-    IPAddress broadcastIP(255, 255, 255, 255);
-    udp.beginPacket(broadcastIP, UDP_PORT);
-    udp.write((const uint8_t*)buffer, strlen(buffer));
-    udp.endPacket();
-}
-
-void PairingHandler::listenForDiscovery() {
-    int packetSize = udp.parsePacket();
-    if (packetSize) {
-        char buffer[256];
-        int len = udp.read(buffer, 255);
-        if (len > 0) buffer[len] = 0;
-
-        StaticJsonDocument<256> doc;
-        DeserializationError error = deserializeJson(doc, buffer);
-        if (error) return;
-
-        const char* clientMac = doc["mac"];
-        const char* clientType = doc["type"];
-        
-        if (clientMac && clientType) {
-            forwardToMqtt(clientMac, clientType);
+        if (countdownSeconds <= 0)
+        {
+            Serial.println("[Pairing] Session expired. Regenerating session...");
+            generateSectionId();
+            countdownSeconds = 300;
+            publishPairRequest();
         }
     }
 }
 
-void PairingHandler::forwardToMqtt(const String& clientMac, const String& clientType) {
-    Serial.println("[Pairing] Forwarding discovery for: " + clientMac);
-    
-    // Topic: iot/:tenantCode/:gwType/:gwId/pair-forward
-    String clientId = "GATE_" + macAddress.substring(macAddress.length() - 5);
-    String topic = "iot/" + tenantCode + "/" + deviceType + "/" + clientId + "/pair-forward";
-    
-    StaticJsonDocument<128> doc;
-    doc["macAddress"] = clientMac;
-    doc["type"] = clientType;
-    
-    char buffer[128];
-    serializeJson(doc, buffer);
-    mqtt.publish(topic.c_str(), buffer);
+void PairingHandler::generateSectionId()
+{
+    // Generate a random 6-digit session ID
+    sectionId = String(random(100000, 999999));
 }
 
-void PairingHandler::handlePairToken(const char* topic, const uint8_t* payload, unsigned int length) {
-    Serial.println("[Pairing] Received pair token");
-    
+void PairingHandler::publishPairRequest()
+{
+    Serial.println("[Pairing] Publishing pair request to MQTT...");
+
     StaticJsonDocument<256> doc;
-    deserializeJson(doc, payload, length);
-    
-    const char* token = doc["pairToken"];
-    if (token) {
-        pairToken = String(token);
-        state = PairingState::WAITING_ACTIVATION;
-        
-        // Send activation request
-        String actTopic = "iot/" + tenantCode + "/" + deviceType + "/" + macAddress + "/pair-activate";
-        StaticJsonDocument<128> actDoc;
-        actDoc["token"] = pairToken;
-        char buffer[128];
-        serializeJson(actDoc, buffer);
-        mqtt.publish(actTopic.c_str(), buffer);
+    doc["mac"] = macAddress;
+    doc["sectionId"] = sectionId;
+    doc["type"] = deviceType;
+
+    char buffer[256];
+    serializeJson(doc, buffer);
+
+    mqtt.publish("iot/pair-request", buffer);
+    lastPublishMs = millis();
+}
+
+void PairingHandler::handlePairConfirm(const char *topic, const uint8_t *payload, unsigned int length)
+{
+    Serial.println("[Pairing] Received pair confirm payload from MQTT");
+
+    StaticJsonDocument<256> doc;
+    DeserializationError error = deserializeJson(doc, payload, length);
+    if (error)
+    {
+        Serial.print("[Pairing] JSON Deserialization error: ");
+        Serial.println(error.c_str());
+        return;
+    }
+
+    const char *objectId = doc["objectId"];
+    const char *token = doc["token"];
+
+    if (objectId && token)
+    {
+        String recvToken = String(token);
+        if (recvToken == sectionId)
+        {
+            Serial.println("[Pairing] Token matches. Sending HTTP confirmation to server...");
+            sendHttpConfirm(objectId, recvToken);
+        }
+        else
+        {
+            Serial.println("[Pairing] Token mismatch. Recv: " + recvToken + ", Expected: " + sectionId);
+        }
     }
 }
 
-void PairingHandler::handlePairStatus(const char* topic, const uint8_t* payload, unsigned int length) {
-    StaticJsonDocument<128> doc;
-    deserializeJson(doc, payload, length);
-    
-    if (String(doc["status"] | "") == "ACTIVE") {
-        Serial.println("[Pairing] Device activated!");
-        prefs.putString("token", pairToken);
-        state = PairingState::ACTIVE;
+void PairingHandler::sendHttpConfirm(const String &objectId, const String &token)
+{
+    if (WiFi.status() != WL_CONNECTED)
+    {
+        Serial.println("[Pairing] HTTP Confirm failed: WiFi disconnected");
+        return;
     }
+
+    HTTPClient http;
+    String url = String(BACKEND_HTTP_URL) + "/devices/pair-confirm";
+
+    Serial.println("[Pairing] Connecting to: " + url);
+    http.begin(url);
+    http.addHeader("Content-Type", "application/json");
+
+    StaticJsonDocument<256> doc;
+    doc["mac"] = macAddress;
+    doc["objectId"] = objectId;
+    doc["token"] = token;
+
+    String jsonBody;
+    serializeJson(doc, jsonBody);
+
+    int httpResponseCode = http.POST(jsonBody);
+
+    if (httpResponseCode == 200 || httpResponseCode == 201)
+    {
+        String response = http.getString();
+        Serial.println("[Pairing] HTTP Confirmation success: " + response);
+
+        // Save pair status and token to preferences
+        pairToken = token;
+        deviceInfo.setPairing(DevicePairState::PAIRED);
+
+        // Show Success screen on OLEDs
+        entryOled.showMessage("PAIR SUCCESS", 2, true);
+        exitOled.showMessage("PAIR SUCCESS", 2, true);
+        delay(3000);
+
+        // Reset screens to Idle
+        entryOled.showIdle();
+        exitOled.showIdle();
+    }
+    else
+    {
+        Serial.print("[Pairing] HTTP POST failed, code: ");
+        Serial.println(httpResponseCode);
+        String response = http.getString();
+        Serial.println("[Pairing] Response: " + response);
+    }
+    http.end();
 }

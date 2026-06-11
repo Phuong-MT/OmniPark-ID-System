@@ -20,6 +20,7 @@ public:
     void showError();
     void showGreeting(const String &cardId);
     void showMessage(const String &msg, uint8_t textSize = 1, bool clearScreen = true);
+    void showPairing(const String &macAddress, const String &sectionId, int countdownSeconds);
 
 private:
     void drawHeader(const String &title);
