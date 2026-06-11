@@ -1,0 +1,173 @@
+# ==============================================================================
+# OmniPark ID System — Server Deployment (VPS via Docker Compose)
+# ==============================================================================
+# Deploys backend (NestJS) + Mosquitto MQTT broker to a VPS using
+# Docker Compose with `--profile deploy`.
+#
+# Required GitHub Secrets:
+#   VPS_HOST            – VPS IP address or hostname
+#   VPS_USER            – SSH username (e.g. root, deploy)
+#   VPS_SSH_KEY         – Private SSH key for authentication
+#   VPS_SSH_PORT        – SSH port (default: 22)
+#
+# Required GitHub Secrets (Server environment):
+#   MONGO_URI_OMNIPARK_ID_SYSTEM  – MongoDB connection string
+#   JWT_SECRET                    – JWT access token secret
+#   JWT_REFRESH_SECRET            – JWT refresh token secret
+#   MQTT_BROKER_URL               – MQTT broker URL (default: mqtt://mosquitto:1883)
+#
+# Optional GitHub Secrets (Server environment):
+#   SERVER_PORT             – Server port (default: 3000)
+#   BREVO_SMTP_HOST         – Brevo SMTP host
+#   BREVO_SMTP_PORT         – Brevo SMTP port
+#   BREVO_SMTP_USER         – Brevo SMTP username
+#   BREVO_SMTP_PASS         – Brevo SMTP password
+#   MAIL_FROM_ADDRESS       – Sender email address
+#   MAIL_FROM_NAME          – Sender display name
+#   CLOUDINARY_CLOUD_NAME   – Cloudinary cloud name
+#   CLOUDINARY_API_KEY      – Cloudinary API key
+#   CLOUDINARY_API_SECRET   – Cloudinary API secret
+# ==============================================================================
+
+name: Deploy Server (VPS)
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "server/**"
+      - "mosquitto/**"
+      - "nginx/**"
+      - "docker-compose.yml"
+      - ".github/workflows/deploy-server.yml"
+  pull_request:
+    branches: [master]
+    paths:
+      - "server/**"
+      - "mosquitto/**"
+      - "nginx/**"
+      - "docker-compose.yml"
+      - ".github/workflows/deploy-server.yml"
+  workflow_dispatch:
+
+jobs:
+  # ── Lint & Test ─────────────────────────────────────────────────────────────
+  check:
+    name: Lint & Test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "npm"
+          cache-dependency-path: server/package.json
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Lint
+        run: npm run lint
+        continue-on-error: true
+
+      - name: Build check
+        run: npm run build
+
+  # ── Deploy to VPS ──────────────────────────────────────────────────────────
+  deploy:
+    name: Deploy to VPS
+    runs-on: ubuntu-latest
+    needs: check
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Copy project files to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_SSH_PORT || 22 }}
+          source: "server/,mosquitto/,nginx/,docker-compose.yml"
+          target: /opt/omnipark-id-system
+          overwrite: true
+
+      - name: Deploy via Docker Compose on VPS
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_SSH_PORT || 22 }}
+          script: |
+            cd /opt/omnipark-id-system
+
+            # Create the server .env file directly on VPS
+            cat > server/.env << 'ENVEOF'
+            MQTT_BROKER_URL=${{ secrets.MQTT_BROKER_URL || 'mqtt://mosquitto:1883' }}
+            MONGO_URI_OMNIPARK_ID_SYSTEM=${{ secrets.MONGO_URI_OMNIPARK_ID_SYSTEM }}
+            JWT_SECRET=${{ secrets.JWT_SECRET }}
+            JWT_REFRESH_SECRET=${{ secrets.JWT_REFRESH_SECRET }}
+            PORT=${{ secrets.SERVER_PORT || '3000' }}
+            BREVO_SMTP_HOST=${{ secrets.BREVO_SMTP_HOST }}
+            BREVO_SMTP_PORT=${{ secrets.BREVO_SMTP_PORT || '587' }}
+            BREVO_SMTP_USER=${{ secrets.BREVO_SMTP_USER }}
+            BREVO_SMTP_PASS=${{ secrets.BREVO_SMTP_PASS }}
+            MAIL_FROM_ADDRESS=${{ secrets.MAIL_FROM_ADDRESS }}
+            MAIL_FROM_NAME=${{ secrets.MAIL_FROM_NAME || 'OmniPark ID System' }}
+            CLOUDINARY_CLOUD_NAME=${{ secrets.CLOUDINARY_CLOUD_NAME }}
+            CLOUDINARY_API_KEY=${{ secrets.CLOUDINARY_API_KEY }}
+            CLOUDINARY_API_SECRET=${{ secrets.CLOUDINARY_API_SECRET }}
+            ENVEOF
+
+            # Create root .env file for docker compose variables
+            echo "SERVER_PORT=${{ secrets.SERVER_PORT || '3000' }}" > .env
+
+            # Inject server port into nginx config
+            PORT="${{ secrets.SERVER_PORT || '3000' }}"
+            sed -i "s/SERVER_PORT/${PORT}/g" nginx/nginx.conf
+
+            # Pull latest images & rebuild
+            docker compose --profile deploy build --no-cache
+            docker compose --profile deploy up -d --force-recreate
+
+            # Clean up dangling images
+            docker image prune -f
+
+            # Health check — wait for nginx to respond
+            echo "⏳ Waiting for health check..."
+            for i in $(seq 1 30); do
+              if curl -sf http://localhost > /dev/null 2>&1; then
+                echo "✅ Service is healthy!"
+                break
+              fi
+              if [ $i -eq 30 ]; then
+                echo "❌ Health check failed after 30 attempts"
+                docker compose --profile deploy logs --tail=50
+                exit 1
+              fi
+              sleep 2
+            done
+
+            echo "🚀 Deployment complete!"
+            docker compose --profile deploy ps
+
+      - name: Deployment summary
+        run: |
+          echo "## 🖥️ Server Deployment" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Status:** ✅ Deployed" >> $GITHUB_STEP_SUMMARY
+          echo "**Host:** \`${{ secrets.VPS_HOST }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Services:** nginx, backend, mosquitto, certbot" >> $GITHUB_STEP_SUMMARY

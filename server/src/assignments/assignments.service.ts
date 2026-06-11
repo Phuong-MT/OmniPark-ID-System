@@ -21,7 +21,7 @@ export class AssignmentsService {
         const pocId = new Types.ObjectId(payload.pocId);
         const parkId = new Types.ObjectId(payload.parkId);
         const tenantCode = new Types.ObjectId(payload.tenantCode);
-        
+
         const newStart = new Date(payload.schedule.startTime);
         const newEnd = new Date(payload.schedule.endTime);
 

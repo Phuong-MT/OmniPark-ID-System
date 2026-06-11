@@ -138,12 +138,12 @@ export class ParksService {
                 parkId,
                 {
                     $set: {
-                        'map.image.original':  images.original,
-                        'map.image.preview':   images.preview,
+                        'map.image.original': images.original,
+                        'map.image.preview': images.preview,
                         'map.image.thumbnail': images.thumbnail,
-                        'map.config.width':   images.config.width,
-                        'map.config.height':  images.config.height,
-                        'map.config.scale':   images.config.scale,
+                        'map.config.width': images.config.width,
+                        'map.config.height': images.config.height,
+                        'map.config.scale': images.config.scale,
                     },
                 },
                 { new: true },
@@ -159,7 +159,10 @@ export class ParksService {
     async addCluster(
         parkId: string,
         tenantCode: string | undefined,
-        createClusterDto: { name: string; position?: { x?: number; y?: number; lat?: number; lng?: number } },
+        createClusterDto: {
+            name: string;
+            position?: { x?: number; y?: number; lat?: number; lng?: number };
+        },
     ) {
         if (!Types.ObjectId.isValid(parkId)) {
             throw new BadRequestException('Invalid Park ID format');
@@ -173,7 +176,12 @@ export class ParksService {
         const newCluster = {
             _id: newClusterId,
             name: createClusterDto.name,
-            position: createClusterDto.position || { x: 50, y: 50, lat: 0, lng: 0 },
+            position: createClusterDto.position || {
+                x: 50,
+                y: 50,
+                lat: 0,
+                lng: 0,
+            },
             stats: {
                 totalDevices: 0,
                 onlineDevices: 0,
@@ -200,10 +208,18 @@ export class ParksService {
         parkId: string,
         clusterId: string,
         tenantCode: string | undefined,
-        updateClusterDto: { name?: string; position?: { x?: number; y?: number; lat?: number; lng?: number } },
+        updateClusterDto: {
+            name?: string;
+            position?: { x?: number; y?: number; lat?: number; lng?: number };
+        },
     ) {
-        if (!Types.ObjectId.isValid(parkId) || !Types.ObjectId.isValid(clusterId)) {
-            throw new BadRequestException('Invalid Park ID or Cluster ID format');
+        if (
+            !Types.ObjectId.isValid(parkId) ||
+            !Types.ObjectId.isValid(clusterId)
+        ) {
+            throw new BadRequestException(
+                'Invalid Park ID or Cluster ID format',
+            );
         }
         const filter: any = { _id: new Types.ObjectId(parkId) };
         if (tenantCode) {
@@ -216,16 +232,20 @@ export class ParksService {
         }
         if (updateClusterDto.position !== undefined) {
             if (updateClusterDto.position.x !== undefined) {
-                updateFields['clusters.$[elem].position.x'] = updateClusterDto.position.x;
+                updateFields['clusters.$[elem].position.x'] =
+                    updateClusterDto.position.x;
             }
             if (updateClusterDto.position.y !== undefined) {
-                updateFields['clusters.$[elem].position.y'] = updateClusterDto.position.y;
+                updateFields['clusters.$[elem].position.y'] =
+                    updateClusterDto.position.y;
             }
             if (updateClusterDto.position.lat !== undefined) {
-                updateFields['clusters.$[elem].position.lat'] = updateClusterDto.position.lat;
+                updateFields['clusters.$[elem].position.lat'] =
+                    updateClusterDto.position.lat;
             }
             if (updateClusterDto.position.lng !== undefined) {
-                updateFields['clusters.$[elem].position.lng'] = updateClusterDto.position.lng;
+                updateFields['clusters.$[elem].position.lng'] =
+                    updateClusterDto.position.lng;
             }
         }
 
@@ -238,7 +258,9 @@ export class ParksService {
                 filter,
                 { $set: updateFields },
                 {
-                    arrayFilters: [{ 'elem._id': new Types.ObjectId(clusterId) }],
+                    arrayFilters: [
+                        { 'elem._id': new Types.ObjectId(clusterId) },
+                    ],
                     new: true,
                 },
             )
@@ -256,8 +278,13 @@ export class ParksService {
         clusterId: string,
         tenantCode: string | undefined,
     ) {
-        if (!Types.ObjectId.isValid(parkId) || !Types.ObjectId.isValid(clusterId)) {
-            throw new BadRequestException('Invalid Park ID or Cluster ID format');
+        if (
+            !Types.ObjectId.isValid(parkId) ||
+            !Types.ObjectId.isValid(clusterId)
+        ) {
+            throw new BadRequestException(
+                'Invalid Park ID or Cluster ID format',
+            );
         }
         const filter: any = { _id: new Types.ObjectId(parkId) };
         if (tenantCode) {

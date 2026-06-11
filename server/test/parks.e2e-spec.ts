@@ -19,7 +19,9 @@ describe('ParksController (e2e)', () => {
         sort: jest.fn().mockReturnThis(),
         skip: jest.fn().mockReturnThis(),
         limit: jest.fn().mockReturnThis(),
-        lean: jest.fn().mockResolvedValue([{ _id: 'park1', name: 'Alpha Gate' }]),
+        lean: jest
+            .fn()
+            .mockResolvedValue([{ _id: 'park1', name: 'Alpha Gate' }]),
         countDocuments: jest.fn().mockResolvedValue(1),
     };
 
@@ -32,22 +34,28 @@ describe('ParksController (e2e)', () => {
         const moduleFixture: TestingModule = await Test.createTestingModule({
             imports: [ParksModule],
         })
-        .overrideGuard(JwtAuthGuard).useValue({
-            canActivate: (context) => {
-                const req = context.switchToHttp().getRequest();
-                // Default to POC for testing find filters
-                req.user = {
-                    _id: 'pocUserId',
-                    role: UserRole.POC,
-                    tenantCode: new Types.ObjectId(),
-                };
-                return true;
-            }
-        })
-        .overrideGuard(RolesGuard).useValue({ canActivate: () => true })
-        .overrideProvider(getModelToken(Park.name, DBName.omniparkIDSystem)).useValue(mockParkModel)
-        .overrideProvider(getModelToken(Assignment.name, DBName.omniparkIDSystem)).useValue(mockAssignmentModel)
-        .compile();
+            .overrideGuard(JwtAuthGuard)
+            .useValue({
+                canActivate: (context) => {
+                    const req = context.switchToHttp().getRequest();
+                    // Default to POC for testing find filters
+                    req.user = {
+                        _id: 'pocUserId',
+                        role: UserRole.POC,
+                        tenantCode: new Types.ObjectId(),
+                    };
+                    return true;
+                },
+            })
+            .overrideGuard(RolesGuard)
+            .useValue({ canActivate: () => true })
+            .overrideProvider(getModelToken(Park.name, DBName.omniparkIDSystem))
+            .useValue(mockParkModel)
+            .overrideProvider(
+                getModelToken(Assignment.name, DBName.omniparkIDSystem),
+            )
+            .useValue(mockAssignmentModel)
+            .compile();
 
         app = moduleFixture.createNestApplication();
         await app.init();
@@ -65,12 +73,12 @@ describe('ParksController (e2e)', () => {
         expect(response.body).toHaveProperty('data');
         expect(response.body).toHaveProperty('total');
         expect(response.body.data[0].name).toBe('Alpha Gate');
-        
+
         // Ensure model was called with _id filter containing park1
         expect(mockParkModel.find).toHaveBeenCalledWith(
             expect.objectContaining({
-                _id: { $in: ['park1'] }
-            })
+                _id: { $in: ['park1'] },
+            }),
         );
     });
 });

@@ -135,7 +135,7 @@ export class ParksController {
             preview,
             thumbnail,
             publicId,
-            config
+            config,
         });
     }
 
@@ -150,7 +150,11 @@ export class ParksController {
         const user = req.user;
         const tenantCode =
             user.role === UserRole.SUPER_ADMIN ? undefined : user.tenantCode;
-        return this.parksService.addCluster(parkId, tenantCode, createClusterDto);
+        return this.parksService.addCluster(
+            parkId,
+            tenantCode,
+            createClusterDto,
+        );
     }
 
     @UseGuards(JwtAuthGuard, RolesGuard)
@@ -165,7 +169,12 @@ export class ParksController {
         const user = req.user;
         const tenantCode =
             user.role === UserRole.SUPER_ADMIN ? undefined : user.tenantCode;
-        return this.parksService.updateCluster(parkId, clusterId, tenantCode, updateClusterDto);
+        return this.parksService.updateCluster(
+            parkId,
+            clusterId,
+            tenantCode,
+            updateClusterDto,
+        );
     }
 
     @UseGuards(JwtAuthGuard, RolesGuard)

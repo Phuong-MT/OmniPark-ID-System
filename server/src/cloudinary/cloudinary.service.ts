@@ -5,14 +5,14 @@ import { Readable } from 'stream';
 
 export interface ParkMapUploadResult {
     original: string;
-    preview: string;   // 1024px wide
+    preview: string; // 1024px wide
     thumbnail: string; // 256px wide
     publicId: string;
-    config:{
-        width: number,
-        height: number,
-        scale: number
-    }
+    config: {
+        width: number;
+        height: number;
+        scale: number;
+    };
 }
 
 @Injectable()
@@ -45,13 +45,23 @@ export class CloudinaryService {
             overwrite: true,
             // Generate preview + thumbnail eagerly so all 3 URLs are ready immediately
             eager: [
-                { width: 1024, crop: 'limit', fetch_format: 'auto', quality: 'auto' }, // preview
-                { width: 256,  crop: 'limit', fetch_format: 'auto', quality: 'auto' }, // thumbnail
+                {
+                    width: 1024,
+                    crop: 'limit',
+                    fetch_format: 'auto',
+                    quality: 'auto',
+                }, // preview
+                {
+                    width: 256,
+                    crop: 'limit',
+                    fetch_format: 'auto',
+                    quality: 'auto',
+                }, // thumbnail
             ],
             eager_async: false, // wait for eager transforms before responding
         });
 
-        const preview   = result.eager?.[0]?.secure_url ?? result.secure_url;
+        const preview = result.eager?.[0]?.secure_url ?? result.secure_url;
         const thumbnail = result.eager?.[1]?.secure_url ?? result.secure_url;
 
         this.logger.log(
@@ -59,17 +69,17 @@ export class CloudinaryService {
         );
 
         return {
-            original:  result.secure_url,
+            original: result.secure_url,
             preview,
             thumbnail,
-            publicId:  result.public_id,
-            config:{
+            publicId: result.public_id,
+            config: {
                 width: result.eager?.[0].width,
                 height: result.eager?.[0].height,
-                scale:1
-            }
+                scale: 1,
+            },
         };
-    }   
+    }
 
     /**
      * Delete an image from Cloudinary by publicId.

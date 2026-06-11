@@ -93,8 +93,8 @@ export class Device {
     pairTokenExpiresAt?: Date;
 
     // Parks Clusters embeded
-    @Prop({type:Types.ObjectId})
-    clusterId?: Types.ObjectId
+    @Prop({ type: Types.ObjectId })
+    clusterId?: Types.ObjectId;
 }
 
 export const DeviceSchema = SchemaFactory.createForClass(Device);
