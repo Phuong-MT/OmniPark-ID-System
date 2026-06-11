@@ -16,14 +16,14 @@ name: Deploy Web (Vercel)
 
 on:
   push:
-    branches: [main]
+    branches: [master]
     paths:
-      - 'client/**'
-      - '.github/workflows/deploy-web.yml'
+      - "client/**"
+      - ".github/workflows/deploy-web.yml"
   pull_request:
-    branches: [main]
+    branches: [master]
     paths:
-      - 'client/**'
+      - "client/**"
   workflow_dispatch:
 
 env:
@@ -47,7 +47,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: 'npm'
+          cache: "npm"
           cache-dependency-path: client/package-lock.json
 
       - name: Install dependencies
@@ -74,7 +74,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: 'npm'
+          cache: "npm"
           cache-dependency-path: client/package-lock.json
 
       - name: Install Vercel CLI
