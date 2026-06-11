@@ -4,8 +4,6 @@ services:
   mosquitto:
     image: eclipse-mosquitto:latest
     container_name: mosquitto
-    profiles:
-      - deploy
     ports:
       - "1883:1883"
       - "9001:9001"
@@ -22,8 +20,6 @@ services:
       context: ./server
       dockerfile: Dockerfile
     container_name: omnipark_backend
-    profiles:
-      - deploy
     environment:
       - MQTT_BROKER_URL=mqtt://mosquitto:1883
       # Add other environment variables from server/.env here if needed
@@ -43,8 +39,6 @@ services:
   nginx:
     image: nginx:alpine
     container_name: omnipark_nginx
-    profiles:
-      - deploy
     ports:
       - "80:80"
     volumes:

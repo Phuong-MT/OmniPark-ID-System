@@ -138,8 +138,8 @@ jobs:
             sed -i "s/SERVER_PORT/${PORT}/g" nginx/nginx.conf
 
             # Pull latest images & rebuild
-            docker compose --profile deploy build --no-cache
-            docker compose --profile deploy up -d --force-recreate
+            docker compose build --no-cache
+            docker compose up -d --force-recreate
 
             # Clean up dangling images
             docker image prune -f
@@ -153,14 +153,14 @@ jobs:
               fi
               if [ $i -eq 30 ]; then
                 echo "❌ Health check failed after 30 attempts"
-                docker compose --profile deploy logs --tail=50
+                docker compose logs --tail=50
                 exit 1
               fi
               sleep 2
             done
 
             echo "🚀 Deployment complete!"
-            docker compose --profile deploy ps
+            docker compose ps
 
       - name: Deployment summary
         run: |
