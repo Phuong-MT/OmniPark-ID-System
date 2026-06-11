@@ -138,7 +138,7 @@ jobs:
             sed -i "s/SERVER_PORT/${PORT}/g" nginx/nginx.conf
 
             # Ensure standard binary directories are in PATH (needed for non-interactive SSH)
-            export PATH="/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
+            export PATH="$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/snap/bin:$PATH"
 
             # Detect docker-compose vs docker compose
             if command -v docker-compose >/dev/null 2>&1; then
