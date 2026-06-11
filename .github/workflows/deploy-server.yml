@@ -137,9 +137,16 @@ jobs:
             PORT="${{ secrets.SERVER_PORT || '3000' }}"
             sed -i "s/SERVER_PORT/${PORT}/g" nginx/nginx.conf
 
+            # Detect docker-compose vs docker compose
+            if command -v docker-compose >/dev/null 2>&1; then
+              COMPOSE_CMD="docker-compose"
+            else
+              COMPOSE_CMD="docker compose"
+            fi
+
             # Pull latest images & rebuild
-            docker compose build --no-cache
-            docker compose up -d --force-recreate
+            $COMPOSE_CMD build --no-cache
+            $COMPOSE_CMD up -d --force-recreate
 
             # Clean up dangling images
             docker image prune -f
@@ -153,14 +160,14 @@ jobs:
               fi
               if [ $i -eq 30 ]; then
                 echo "❌ Health check failed after 30 attempts"
-                docker compose logs --tail=50
+                $COMPOSE_CMD logs --tail=50
                 exit 1
               fi
               sleep 2
             done
 
             echo "🚀 Deployment complete!"
-            docker compose ps
+            $COMPOSE_CMD ps
 
       - name: Deployment summary
         run: |
