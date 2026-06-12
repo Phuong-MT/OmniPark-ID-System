@@ -178,10 +178,10 @@ jobs:
               sleep 5
 
               # Step 3: Obtain SSL certificate via Certbot (Non-interactive)
-              $COMPOSE_CMD run --rm certbot certonly \
+              $COMPOSE_CMD run --rm --entrypoint "certbot" certbot certonly \
                 --webroot \
                 --webroot-path=/var/www/certbot \
-                --email admin@${DOMAIN} \
+                --register-unsafely-without-email \
                 --agree-tos \
                 --no-eff-email \
                 --non-interactive \
@@ -200,6 +200,8 @@ jobs:
               rm -f nginx/nginx-active.conf
             else
               echo "✅ SSL certificate already exists, skipping bootstrap."
+              # Attempt to renew existing certificates quietly
+              $COMPOSE_CMD run --rm --entrypoint "certbot" certbot renew --non-interactive || true
             fi
 
             # ── Build & Deploy ──
