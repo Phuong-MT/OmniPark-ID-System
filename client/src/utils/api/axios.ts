@@ -40,9 +40,10 @@ apiClient.interceptors.response.use(
 		) {
 			originalRequest._retry = true;
 			try {
+				const baseUrl = apiClient.defaults.baseURL?.replace(/\/$/, "");
 				// Attempt to refresh token
 				await axios.post(
-					`${apiClient.defaults.baseURL}/auth/refresh`,
+					`${baseUrl}/auth/refresh`,
 					{},
 					{ withCredentials: true }
 				);
