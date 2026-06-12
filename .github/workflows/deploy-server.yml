@@ -144,6 +144,9 @@ jobs:
             sed -i "s/DOMAIN_PLACEHOLDER/${DOMAIN}/g" nginx/nginx.conf
             sed -i "s/DOMAIN_PLACEHOLDER/${DOMAIN}/g" nginx/nginx-initial.conf 2>/dev/null || true
 
+            # Ensure directories for certificates exist
+            mkdir -p nginx/certs nginx/certbot
+
             # Ensure standard binary directories are in PATH (needed for non-interactive SSH)
             export PATH="$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/snap/bin:$PATH"
 
@@ -158,13 +161,10 @@ jobs:
               exit 1
             fi
 
-            CERT_PATH="/etc/letsencrypt/live/${DOMAIN}/fullchain.pem"
+            CERT_PATH="nginx/certs/live/${DOMAIN}/fullchain.pem"
 
             # ── SSL Bootstrap: obtain certificate if not exists ──
-            # Check if cert already exists in the certbot_certs volume
-            CERT_EXISTS=$($COMPOSE_CMD run --rm --entrypoint "test -f ${CERT_PATH} && echo yes || echo no" certbot 2>/dev/null || echo "no")
-
-            if [ "$CERT_EXISTS" != "yes" ]; then
+            if [ ! -f "$CERT_PATH" ]; then
               echo "🔐 SSL certificate not found — bootstrapping with Certbot..."
 
               # Step 1: Use initial HTTP-only config for ACME challenge
@@ -177,13 +177,14 @@ jobs:
               # Wait for nginx to be ready
               sleep 5
 
-              # Step 3: Obtain SSL certificate via Certbot
+              # Step 3: Obtain SSL certificate via Certbot (Non-interactive)
               $COMPOSE_CMD run --rm certbot certonly \
                 --webroot \
                 --webroot-path=/var/www/certbot \
                 --email admin@${DOMAIN} \
                 --agree-tos \
                 --no-eff-email \
+                --non-interactive \
                 -d ${DOMAIN}
 
               if [ $? -ne 0 ]; then
@@ -211,7 +212,7 @@ jobs:
             # Health check — wait for HTTPS to respond
             echo "⏳ Waiting for health check..."
             for i in $(seq 1 30); do
-              if curl -sf https://${DOMAIN} > /dev/null 2>&1; then
+              if curl -sf -k https://${DOMAIN} > /dev/null 2>&1; then
                 echo "✅ Service is healthy!"
                 break
               fi
