@@ -26,6 +26,7 @@ export class AuthController {
             httpOnly: true,
             secure: isProd,
             sameSite: isProd ? 'none' : 'lax',
+            domain: isProd ? '.phuong-mt.id.vn' : undefined,
             path: '/',
         });
 
@@ -33,6 +34,7 @@ export class AuthController {
             httpOnly: true,
             secure: isProd,
             sameSite: isProd ? 'none' : 'lax',
+            domain: isProd ? '.phuong-mt.id.vn' : undefined,
             path: '/',
         });
 
@@ -77,6 +79,7 @@ export class AuthController {
             httpOnly: true,
             secure: isProd,
             sameSite: isProd ? 'none' : 'lax',
+            domain: isProd ? '.phuong-mt.id.vn' : undefined,
             path: '/',
         });
 
@@ -84,6 +87,7 @@ export class AuthController {
             httpOnly: true,
             secure: isProd,
             sameSite: isProd ? 'none' : 'lax',
+            domain: isProd ? '.phuong-mt.id.vn' : undefined,
             path: '/',
         });
 
@@ -104,6 +108,7 @@ export class AuthController {
             httpOnly: true,
             secure: isProd,
             sameSite: isProd ? 'none' : 'lax',
+            domain: isProd ? '.phuong-mt.id.vn' : undefined,
             path: '/',
         });
 
@@ -112,8 +117,15 @@ export class AuthController {
 
     @Post('logout')
     async logout(@Res({ passthrough: true }) res: Response) {
-        res.clearCookie('accessToken', { path: '/' });
-        res.clearCookie('refreshToken', { path: '/' });
+        const isProd = process.env.NODE_ENV === 'production';
+        res.clearCookie('accessToken', {
+            path: '/',
+            domain: isProd ? '.phuong-mt.id.vn' : undefined,
+        });
+        res.clearCookie('refreshToken', {
+            path: '/',
+            domain: isProd ? '.phuong-mt.id.vn' : undefined,
+        });
         return { message: 'Logout successful' };
     }
 }
