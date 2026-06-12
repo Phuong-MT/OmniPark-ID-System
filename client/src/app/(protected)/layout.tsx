@@ -40,7 +40,13 @@ export default async function ProtectedLayout({ children }: { children: React.Re
 				</DashboardLayoutClient>
 			</>
 		);
-	} catch (error) {
+	} catch (error: any) {
+		console.error("❌ Auth Layout Error:", {
+			message: error.message,
+			status: error.response?.status,
+			data: error.response?.data,
+			url: error.config?.url,
+		});
 		// If unauthorized or any error occurs, redirect to login
 		redirect("/login");
 	}
