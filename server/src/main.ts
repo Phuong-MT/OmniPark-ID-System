@@ -17,8 +17,8 @@ async function bootstrap() {
             ) {
                 callback(null, true);
             } else if (
-                origin.startsWith('https://omnipark-id-system') ||
-                origin.startsWith('http://omnipark-id-system')
+                origin.startsWith('https://api.phuong-mt.id.vn') ||
+                origin.startsWith('http://api.phuong-mt.id.vn')
             ) {
                 callback(null, true);
             } else {
