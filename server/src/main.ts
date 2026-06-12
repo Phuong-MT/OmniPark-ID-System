@@ -17,8 +17,8 @@ async function bootstrap() {
             ) {
                 callback(null, true);
             } else if (
-                origin.startsWith('https://api.phuong-mt.id.vn') ||
-                origin.startsWith('http://api.phuong-mt.id.vn')
+                origin.startsWith('https://phuong-mt.id.vn') ||
+                origin.startsWith('http://phuong-mt.id.vn')
             ) {
                 callback(null, true);
             } else {
