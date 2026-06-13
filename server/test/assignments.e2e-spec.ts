@@ -30,16 +30,21 @@ describe('AssignmentsController (e2e)', () => {
         const moduleFixture: TestingModule = await Test.createTestingModule({
             imports: [AssignmentsModule],
         })
-        .overrideGuard(JwtAuthGuard).useValue({
-            canActivate: (context) => {
-                const req = context.switchToHttp().getRequest();
-                req.user = mockAdminUser;
-                return true;
-            }
-        })
-        .overrideGuard(RolesGuard).useValue({ canActivate: () => true })
-        .overrideProvider(getModelToken(Assignment.name, DBName.omniparkIDSystem)).useValue(mockAssignmentModel)
-        .compile();
+            .overrideGuard(JwtAuthGuard)
+            .useValue({
+                canActivate: (context) => {
+                    const req = context.switchToHttp().getRequest();
+                    req.user = mockAdminUser;
+                    return true;
+                },
+            })
+            .overrideGuard(RolesGuard)
+            .useValue({ canActivate: () => true })
+            .overrideProvider(
+                getModelToken(Assignment.name, DBName.omniparkIDSystem),
+            )
+            .useValue(mockAssignmentModel)
+            .compile();
 
         app = moduleFixture.createNestApplication();
         await app.init();
@@ -51,7 +56,9 @@ describe('AssignmentsController (e2e)', () => {
 
     it('/assignments (POST) - successfully assign park', () => {
         mockAssignmentModel.findOne.mockResolvedValue(null);
-        mockAssignmentModel.create.mockResolvedValue({ _id: 'dummyAssignmentId' });
+        mockAssignmentModel.create.mockResolvedValue({
+            _id: 'dummyAssignmentId',
+        });
 
         return request(app.getHttpServer())
             .post('/assignments')
@@ -60,8 +67,8 @@ describe('AssignmentsController (e2e)', () => {
                 parkId: new Types.ObjectId().toString(),
                 schedule: {
                     startTime: new Date().toISOString(),
-                    endTime: new Date(Date.now() + 86400000).toISOString()
-                }
+                    endTime: new Date(Date.now() + 86400000).toISOString(),
+                },
             })
             .expect(201)
             .expect((res) => {
@@ -70,7 +77,9 @@ describe('AssignmentsController (e2e)', () => {
     });
 
     it('/assignments (POST) - fails if assignment exists', () => {
-        mockAssignmentModel.findOne.mockResolvedValue({ _id: 'existingAssignment' });
+        mockAssignmentModel.findOne.mockResolvedValue({
+            _id: 'existingAssignment',
+        });
 
         return request(app.getHttpServer())
             .post('/assignments')
@@ -82,7 +91,9 @@ describe('AssignmentsController (e2e)', () => {
     });
 
     it('/assignments/:pocId/:parkId (DELETE) - successfully unassign', () => {
-        mockAssignmentModel.findOneAndDelete.mockResolvedValue({ _id: 'deletedAssignment' });
+        mockAssignmentModel.findOneAndDelete.mockResolvedValue({
+            _id: 'deletedAssignment',
+        });
 
         return request(app.getHttpServer())
             .delete(`/assignments/poc123/park123`)

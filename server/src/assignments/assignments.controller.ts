@@ -33,7 +33,13 @@ export class AssignmentsController {
             schedule: { startTime: Date; endTime: Date };
         },
     ) {
-        if (!body.pocId || !body.parkId || !body.schedule || !body.schedule.startTime || !body.schedule.endTime) {
+        if (
+            !body.pocId ||
+            !body.parkId ||
+            !body.schedule ||
+            !body.schedule.startTime ||
+            !body.schedule.endTime
+        ) {
             throw new HttpException(
                 'pocId and parkId and schedule are required',
                 HttpStatus.BAD_REQUEST,

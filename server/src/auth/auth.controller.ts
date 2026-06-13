@@ -1,6 +1,11 @@
 import { Controller, Post, Body, Res, UseGuards, Req } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { LoginDto, SendCodeDto, LoginWithCodeDto, ResetPasswordDto } from './dto/login.dto';
+import {
+    LoginDto,
+    SendCodeDto,
+    LoginWithCodeDto,
+    ResetPasswordDto,
+} from './dto/login.dto';
 import type { Response, Request } from 'express';
 import { JwtRefreshGuard } from './guards/jwt-refresh.guard';
 
@@ -21,6 +26,7 @@ export class AuthController {
             httpOnly: true,
             secure: isProd,
             sameSite: isProd ? 'none' : 'lax',
+            domain: isProd ? '.phuong-mt.id.vn' : undefined,
             path: '/',
         });
 
@@ -28,6 +34,7 @@ export class AuthController {
             httpOnly: true,
             secure: isProd,
             sameSite: isProd ? 'none' : 'lax',
+            domain: isProd ? '.phuong-mt.id.vn' : undefined,
             path: '/',
         });
 
@@ -36,13 +43,17 @@ export class AuthController {
 
     @Post('send-code')
     async sendVerificationCode(@Body() sendCodeDto: SendCodeDto) {
-        await this.authService.generateAndSendVerificationCode(sendCodeDto.email);
+        await this.authService.generateAndSendVerificationCode(
+            sendCodeDto.email,
+        );
         return { message: 'Verification code sent successfully' };
     }
 
     @Post('forgot-password/send-code')
     async sendForgotPasswordCode(@Body() sendCodeDto: SendCodeDto) {
-        await this.authService.generateAndSendVerificationCode(sendCodeDto.email);
+        await this.authService.generateAndSendVerificationCode(
+            sendCodeDto.email,
+        );
         return { message: 'Verification code sent successfully' };
     }
 
@@ -68,6 +79,7 @@ export class AuthController {
             httpOnly: true,
             secure: isProd,
             sameSite: isProd ? 'none' : 'lax',
+            domain: isProd ? '.phuong-mt.id.vn' : undefined,
             path: '/',
         });
 
@@ -75,6 +87,7 @@ export class AuthController {
             httpOnly: true,
             secure: isProd,
             sameSite: isProd ? 'none' : 'lax',
+            domain: isProd ? '.phuong-mt.id.vn' : undefined,
             path: '/',
         });
 
@@ -95,6 +108,7 @@ export class AuthController {
             httpOnly: true,
             secure: isProd,
             sameSite: isProd ? 'none' : 'lax',
+            domain: isProd ? '.phuong-mt.id.vn' : undefined,
             path: '/',
         });
 
@@ -103,8 +117,15 @@ export class AuthController {
 
     @Post('logout')
     async logout(@Res({ passthrough: true }) res: Response) {
-        res.clearCookie('accessToken', { path: '/' });
-        res.clearCookie('refreshToken', { path: '/' });
+        const isProd = process.env.NODE_ENV === 'production';
+        res.clearCookie('accessToken', {
+            path: '/',
+            domain: isProd ? '.phuong-mt.id.vn' : undefined,
+        });
+        res.clearCookie('refreshToken', {
+            path: '/',
+            domain: isProd ? '.phuong-mt.id.vn' : undefined,
+        });
         return { message: 'Logout successful' };
     }
 }

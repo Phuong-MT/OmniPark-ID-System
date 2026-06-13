@@ -74,9 +74,7 @@ describe('AuthService', () => {
                 tenantCode: 'tenant1',
                 role: 'admin',
             });
-            expect(userService.findByUsername).toHaveBeenCalledWith(
-                'test'
-            );
+            expect(userService.findByUsername).toHaveBeenCalledWith('test');
             expect(bcrypt.compare).toHaveBeenCalledWith(
                 'password',
                 'hashedPass',
@@ -132,28 +130,47 @@ describe('AuthService', () => {
 
             await service.generateAndSendVerificationCode('test@example.com');
 
-            expect(userService.findByEmail).toHaveBeenCalledWith('test@example.com');
+            expect(userService.findByEmail).toHaveBeenCalledWith(
+                'test@example.com',
+            );
             expect(userService.saveVerificationCode).toHaveBeenCalled();
-            expect(mailService.sendVerificationCode).toHaveBeenCalledWith('test@example.com', expect.any(String));
+            expect(mailService.sendVerificationCode).toHaveBeenCalledWith(
+                'test@example.com',
+                expect.any(String),
+            );
         });
 
         it('should throw UnauthorizedException if user not found by email', async () => {
             userService.findByEmail.mockResolvedValue(null);
-            await expect(service.generateAndSendVerificationCode('test@example.com')).rejects.toThrow('User with this email not found');
+            await expect(
+                service.generateAndSendVerificationCode('test@example.com'),
+            ).rejects.toThrow('User with this email not found');
         });
 
         it('should throw if user is blocked', async () => {
-            userService.findByEmail.mockResolvedValue({ status: UserStatus.BLOCKED });
-            await expect(service.generateAndSendVerificationCode('test@example.com')).rejects.toThrow('User is blocked');
+            userService.findByEmail.mockResolvedValue({
+                status: UserStatus.BLOCKED,
+            });
+            await expect(
+                service.generateAndSendVerificationCode('test@example.com'),
+            ).rejects.toThrow('User is blocked');
         });
 
         it('should clear code and throw Error if sending email fails', async () => {
             const mockUser = { _id: '123', status: UserStatus.ACTIVE };
             userService.findByEmail.mockResolvedValue(mockUser);
-            mailService.sendVerificationCode.mockRejectedValue(new Error('SMTP Error'));
+            mailService.sendVerificationCode.mockRejectedValue(
+                new Error('SMTP Error'),
+            );
 
-            await expect(service.generateAndSendVerificationCode('test@example.com')).rejects.toThrow('Could not send verification email. Please try again.');
-            expect(userService.clearVerificationCode).toHaveBeenCalledWith('123');
+            await expect(
+                service.generateAndSendVerificationCode('test@example.com'),
+            ).rejects.toThrow(
+                'Could not send verification email. Please try again.',
+            );
+            expect(userService.clearVerificationCode).toHaveBeenCalledWith(
+                '123',
+            );
         });
     });
 
@@ -175,34 +192,60 @@ describe('AuthService', () => {
             };
             userService.findByEmail.mockResolvedValue(mockUser);
 
-            const result = await service.validateCodeAndLogin('test@example.com', '123456');
+            const result = await service.validateCodeAndLogin(
+                'test@example.com',
+                '123456',
+            );
 
-            expect(result).toEqual({ userId: '123', tenantCode: 'tenant1', role: 'admin' });
-            expect(userService.clearVerificationCode).toHaveBeenCalledWith('123');
+            expect(result).toEqual({
+                userId: '123',
+                tenantCode: 'tenant1',
+                role: 'admin',
+            });
+            expect(userService.clearVerificationCode).toHaveBeenCalledWith(
+                '123',
+            );
         });
 
         it('should throw if user not found', async () => {
             userService.findByEmail.mockResolvedValue(null);
-            await expect(service.validateCodeAndLogin('test@example.com', '123456')).rejects.toThrow('Invalid email or code');
+            await expect(
+                service.validateCodeAndLogin('test@example.com', '123456'),
+            ).rejects.toThrow('Invalid email or code');
         });
 
         it('should throw if user blocked', async () => {
-            userService.findByEmail.mockResolvedValue({ status: UserStatus.BLOCKED });
-            await expect(service.validateCodeAndLogin('test@example.com', '123456')).rejects.toThrow('User is blocked');
+            userService.findByEmail.mockResolvedValue({
+                status: UserStatus.BLOCKED,
+            });
+            await expect(
+                service.validateCodeAndLogin('test@example.com', '123456'),
+            ).rejects.toThrow('User is blocked');
         });
 
         it('should throw if code is invalid', async () => {
-            const mockUser = { _id: '123', status: UserStatus.ACTIVE, verificationCode: '654321' };
+            const mockUser = {
+                _id: '123',
+                status: UserStatus.ACTIVE,
+                verificationCode: '654321',
+            };
             userService.findByEmail.mockResolvedValue(mockUser);
-            await expect(service.validateCodeAndLogin('test@example.com', '123456')).rejects.toThrow('Invalid verification code');
+            await expect(
+                service.validateCodeAndLogin('test@example.com', '123456'),
+            ).rejects.toThrow('Invalid verification code');
         });
 
         it('should throw if code is expired', async () => {
             const mockUser = {
-                _id: '123', status: UserStatus.ACTIVE, verificationCode: '123456', verificationCodeExpiresAt: pastDate
+                _id: '123',
+                status: UserStatus.ACTIVE,
+                verificationCode: '123456',
+                verificationCodeExpiresAt: pastDate,
             };
             userService.findByEmail.mockResolvedValue(mockUser);
-            await expect(service.validateCodeAndLogin('test@example.com', '123456')).rejects.toThrow('Verification code expired');
+            await expect(
+                service.validateCodeAndLogin('test@example.com', '123456'),
+            ).rejects.toThrow('Verification code expired');
         });
     });
 
@@ -212,23 +255,45 @@ describe('AuthService', () => {
 
         it('should reset password completely', async () => {
             const mockUser = {
-                _id: '123', status: UserStatus.ACTIVE, verificationCode: '123456', verificationCodeExpiresAt: futureDate
+                _id: '123',
+                status: UserStatus.ACTIVE,
+                verificationCode: '123456',
+                verificationCodeExpiresAt: futureDate,
             };
             userService.findByEmail.mockResolvedValue(mockUser);
             (bcrypt.genSalt as jest.Mock).mockResolvedValue('salt');
             (bcrypt.hash as jest.Mock).mockResolvedValue('newHashedPass');
 
-            await service.resetPassword({ email: 'test@example.com', code: '123456', newPassword: 'new' });
+            await service.resetPassword({
+                email: 'test@example.com',
+                code: '123456',
+                newPassword: 'new',
+            });
 
             expect(bcrypt.hash).toHaveBeenCalledWith('new', 'salt');
-            expect(userService.updatePassword).toHaveBeenCalledWith('123', 'newHashedPass');
-            expect(userService.clearVerificationCode).toHaveBeenCalledWith('123');
+            expect(userService.updatePassword).toHaveBeenCalledWith(
+                '123',
+                'newHashedPass',
+            );
+            expect(userService.clearVerificationCode).toHaveBeenCalledWith(
+                '123',
+            );
         });
 
         it('should throw if invalid code', async () => {
-            const mockUser = { _id: '123', status: UserStatus.ACTIVE, verificationCode: '654321' };
+            const mockUser = {
+                _id: '123',
+                status: UserStatus.ACTIVE,
+                verificationCode: '654321',
+            };
             userService.findByEmail.mockResolvedValue(mockUser);
-            await expect(service.resetPassword({ email: 'test@example.com', code: '123456', newPassword: 'new' })).rejects.toThrow('Invalid verification code');
+            await expect(
+                service.resetPassword({
+                    email: 'test@example.com',
+                    code: '123456',
+                    newPassword: 'new',
+                }),
+            ).rejects.toThrow('Invalid verification code');
         });
     });
 

@@ -1,16 +1,16 @@
 #include "_core/device_info.h"
+#include "_core/gate_type.h"
 #include "config/mqtt_config.h"
 #include "config/wifi_config.h"
+#include "display/OledDisplay.h"
 #include "handshake/handshake.h"
 #include "pairManager/pairManager.h"
 #include "rfid/RFIDScanner.h"
+#include "servo/GateServo.h"
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <ctime>
 #include <string>
-#include "display/OledDisplay.h"
-#include "servo/GateServo.h"
-#include "_core/gate_type.h"
 
 using namespace std;
 
@@ -20,14 +20,6 @@ WifiConfig wifi;
 WiFiClient net;
 MqttConfig mqtt(net);
 DeviceInfo &deviceInfo = DeviceInfo::getInstance();
-
-String clientId = "ESP32_GATE_" + String((uint32_t)ESP.getEfuseMac(), HEX);
-String macStr = String((uint32_t)ESP.getEfuseMac(), HEX);
-HandshakeManager hs(clientId.c_str(), macStr.c_str());
-
-PairingHandler pairing(
-    mqtt, "GATE",
-    "OMNIPARK_DEMO"); // Hardcoded tenant for now, should come from config
 
 String lastCartId = "";
 
@@ -49,11 +41,18 @@ RFIDScanner entryScanner(GateType::ENTRY, SS_PIN_ENTRY, RST_PIN_ENTRY);
 RFIDScanner exitScanner(GateType::EXIT, SS_PIN_EXIT, RST_PIN_EXIT);
 
 OledDisplay entryOled(GateType::ENTRY, &Wire, 0x3C);
-// Khởi tạo exitOled dùng Wire1, địa chỉ thường là 0x3C nếu nó khác bus I2C với entryOled
+// Khởi tạo exitOled dùng Wire1, địa chỉ thường là 0x3C nếu nó khác bus I2C với
+// entryOled
 OledDisplay exitOled(GateType::EXIT, &Wire1, 0x3C);
 
 GateServo entryServo(GateType::ENTRY, SERVO_PIN_ENTRY);
 GateServo exitServo(GateType::EXIT, SERVO_PIN_EXIT);
+
+String clientId = "ESP32_GATE_" + String((uint32_t)ESP.getEfuseMac(), HEX);
+String macStr = String((uint32_t)ESP.getEfuseMac(), HEX);
+HandshakeManager hs(clientId.c_str(), macStr.c_str());
+
+PairingHandler pairing(mqtt, deviceInfo, "GATE", entryOled, exitOled);
 
 void onCardScanned(GateType type, const String &cardId, bool isError)
 {
@@ -85,6 +84,9 @@ void onCardScanned(GateType type, const String &cardId, bool isError)
     mqtt.publish(topic.c_str(), buffer);
 }
 
+SemaphoreHandle_t deviceStateMutex = NULL;
+TaskHandle_t hsHbTaskHandle = NULL;
+
 unsigned long lastHandshakeMs = 0;
 const unsigned long HANDSHAKE_INTERVAL = 20000; // 20s
 
@@ -92,6 +94,57 @@ unsigned long lastHeartbeatMs = 0;
 const unsigned long HEARTBEAT_INTERVALS[] = {60000, 120000,
                                              300000}; // 1m, 2m, 5m
 int currentHeartbeatIndex = 0;
+
+void handshakeHeartbeatTask(void *pvParameters)
+{
+    while (true)
+    {
+        if (wifi.connected())
+        {
+            unsigned long now = millis();
+
+            if (deviceStateMutex != NULL && xSemaphoreTake(deviceStateMutex, portMAX_DELAY) == pdTRUE)
+            {
+                // Handshake sending
+                if (!lastHandshakeMs || (now - lastHandshakeMs > HANDSHAKE_INTERVAL &&
+                                         !(deviceInfo.getSessionToken().length() > 0 && deviceInfo.getSessionTokenExpiresAt() > std::time(nullptr))))
+                {
+                    Serial.println("[HS] Sending handshake...");
+
+                    NetworkInfo netInfo = wifi.get();
+                    std::string payload = hs.buildRequestPayload(
+                        netInfo.ssid.c_str(), netInfo.subnetMask.c_str(), netInfo.ip.toString().c_str());
+
+                    mqtt.publish(HANDSHAKE_TOPIC_REQUEST, payload.c_str());
+
+                    lastHandshakeMs = now;
+                }
+                // Heartbeat after handshake
+                else if (deviceInfo.getDeviceId().length() > 0 && deviceInfo.getPairing() == DevicePairState::PAIRED)
+                {
+                    if (hs.hasValidSession(std::time(nullptr)) &&
+                        now - lastHeartbeatMs > HEARTBEAT_INTERVALS[currentHeartbeatIndex])
+                    {
+                        Serial.println("[Heartbeat] Sending...");
+
+                        String topic = "iot/heartbeat/" + macStr;
+                        StaticJsonDocument<128> doc;
+                        doc["mac"] = macStr.c_str();
+
+                        char buffer[128];
+                        serializeJson(doc, buffer);
+                        mqtt.publish(topic.c_str(), buffer);
+
+                        lastHeartbeatMs = now;
+                        currentHeartbeatIndex = (currentHeartbeatIndex + 1) % 3;
+                    }
+                }
+                xSemaphoreGive(deviceStateMutex);
+            }
+        }
+        vTaskDelay(pdMS_TO_TICKS(100));
+    }
+}
 
 void setup()
 {
@@ -147,7 +200,8 @@ void setup()
             }
         });
 
-    // pairing.begin();
+    randomSeed(ESP.getCycleCount());
+    pairing.begin();
     mqtt.begin();
 
     SPI.begin(18, 19, 23); // SCK, MISO, MOSI
@@ -165,56 +219,54 @@ void setup()
 
     entryServo.begin();
     exitServo.begin();
+
+    // Initialize recursive mutex for thread-safe state & MQTT client access
+    deviceStateMutex = xSemaphoreCreateRecursiveMutex();
+    while (!deviceStateMutex)
+    {
+        Serial.println("Failed to create mutex, retrying...");
+        delay(1000);
+        deviceStateMutex = xSemaphoreCreateRecursiveMutex();
+    }
+
+    // Create FreeRTOS task for background Handshake and Heartbeat operations
+    xTaskCreatePinnedToCore(
+        handshakeHeartbeatTask,
+        "HS_HB_Task",
+        4096,
+        NULL,
+        1,
+        &hsHbTaskHandle,
+        0 // Pinned to core 0 (main Arduino task runs on core 1)
+    );
 }
 
 void loop()
 {
-    mqtt.loop();
-    entryScanner.loop();
-    exitScanner.loop();
-    entryOled.loop();
-    exitOled.loop();
-    entryServo.loop();
-    exitServo.loop();
-
-    if (!wifi.connected())
-        return;
-
-    unsigned long now = millis();
-
-    if (!hs.hasValidSession(std::time(nullptr)) &&
-        now - lastHandshakeMs > HANDSHAKE_INTERVAL)
+    if (deviceStateMutex != NULL && xSemaphoreTake(deviceStateMutex, portMAX_DELAY) == pdTRUE)
     {
+        mqtt.loop();
 
-        Serial.println("[HS] Sending handshake...");
+        if (wifi.connected())
+        {
+            // If device is default skip process
+            if (deviceInfo.getDeviceId().length() > 0)
+            {
+                // Run pairing loop
+                pairing.loop();
 
-        NetworkInfo net = wifi.get();
-        std::string payload = hs.buildRequestPayload(
-            net.ssid.c_str(), net.subnetMask.c_str(), net.ip.toString().c_str());
-
-        mqtt.publish(HANDSHAKE_TOPIC_REQUEST, payload.c_str());
-
-        lastHandshakeMs = now;
-        return;
-    };
-    // Heartbeat after handshake
-    if (hs.hasValidSession(std::time(nullptr)) &&
-        now - lastHeartbeatMs > HEARTBEAT_INTERVALS[currentHeartbeatIndex])
-    {
-        Serial.println("[Heartbeat] Sending...");
-
-        String topic = "iot/heartbeat/" + macStr;
-        StaticJsonDocument<128> doc;
-
-        doc["mac"] = macStr.c_str();
-
-        char buffer[128];
-        serializeJson(doc, buffer);
-        mqtt.publish(topic.c_str(), buffer);
-
-        lastHeartbeatMs = now;
-        currentHeartbeatIndex = (currentHeartbeatIndex + 1) % 3;
-    };
-
-    // pair devices
+                if (deviceInfo.getPairing() == DevicePairState::PAIRED)
+                {
+                    entryScanner.loop();
+                    exitScanner.loop();
+                    entryOled.loop();
+                    exitOled.loop();
+                    entryServo.loop();
+                    exitServo.loop();
+                }
+            }
+        }
+        xSemaphoreGive(deviceStateMutex);
+    }
+    delay(10);
 }

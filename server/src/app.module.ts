@@ -13,7 +13,7 @@ import { AuthModule } from './auth/auth.module';
 import { MailModule } from './mail/mail.module';
 import { ParksModule } from './parks/parks.module';
 import { AssignmentsModule } from './assignments/assignments.module';
-import { EdgeModule } from './edge/edge.module';
+import { SocketModule } from './socket/socket.module';
 
 @Module({
     imports: [
@@ -21,10 +21,12 @@ import { EdgeModule } from './edge/edge.module';
             isGlobal: true,
             envFilePath: '.env',
         }),
-        ThrottlerModule.forRoot([{
-            ttl: 60000,
-            limit: 100,
-        }]),
+        ThrottlerModule.forRoot([
+            {
+                ttl: 60000,
+                limit: 100,
+            },
+        ]),
         ConnectDBModule,
         MqttModule,
         DevicesModule,
@@ -34,7 +36,7 @@ import { EdgeModule } from './edge/edge.module';
         MailModule,
         ParksModule,
         AssignmentsModule,
-        EdgeModule,
+        SocketModule,
     ],
     controllers: [AppController],
     providers: [

@@ -65,8 +65,9 @@ axiosServer.interceptors.response.use(
 					.map((c) => `${c.name}=${c.value}`)
 					.join("; ");
 
+				const baseUrl = axiosServer.defaults.baseURL?.replace(/\/$/, "");
 				const refreshRes = await axios.post(
-					`${axiosServer.defaults.baseURL}/auth/refresh`,
+					`${baseUrl}/auth/refresh`,
 					{},
 					{
 						headers: { Cookie: cookieString },

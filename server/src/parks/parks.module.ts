@@ -5,6 +5,7 @@ import { ParksController } from './parks.controller';
 import { DBName } from '../utils/connectDB';
 import { Park, ParkSchema } from './schema/park.schema';
 import { AssignmentsModule } from '../assignments/assignments.module';
+import { CloudinaryModule } from '../cloudinary/cloudinary.module';
 
 @Module({
     imports: [
@@ -13,6 +14,7 @@ import { AssignmentsModule } from '../assignments/assignments.module';
             DBName.omniparkIDSystem,
         ),
         AssignmentsModule,
+        CloudinaryModule,
     ],
     controllers: [ParksController],
     providers: [ParksService],

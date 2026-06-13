@@ -5,16 +5,20 @@ import { forwardRef, Module } from '@nestjs/common';
 import { DevicesService } from './devices.service';
 import { DevicesController } from './devices.controller';
 import { MqttModule } from 'src/mqtt/mqtt.module';
-import { AssignmentsModule } from '../assignments/assignments.module';
+import { SocketModule } from '../socket/socket.module';
+import { Park, ParkSchema } from 'src/parks/schema/park.schema';
 
 @Module({
     imports: [
         MongooseModule.forFeature(
-            [{ name: Device.name, schema: DeviceSchema }],
+            [
+                { name: Device.name, schema: DeviceSchema },
+                { name: Park.name, schema: ParkSchema },
+            ],
             DBName.omniparkIDSystem,
         ),
         forwardRef(() => MqttModule),
-        AssignmentsModule,
+        forwardRef(() => SocketModule),
     ],
     controllers: [DevicesController],
     providers: [DevicesService],

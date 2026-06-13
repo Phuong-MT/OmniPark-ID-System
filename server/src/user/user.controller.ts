@@ -1,4 +1,18 @@
-import { Controller, Logger, Get, Post, Put, UseGuards, Req, Body, NotFoundException, ConflictException, Inject, forwardRef, Query } from '@nestjs/common';
+import {
+    Controller,
+    Logger,
+    Get,
+    Post,
+    Put,
+    UseGuards,
+    Req,
+    Body,
+    NotFoundException,
+    ConflictException,
+    Inject,
+    forwardRef,
+    Query,
+} from '@nestjs/common';
 import { UserService } from './user.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -15,7 +29,7 @@ export class UserController {
         private readonly userService: UserService,
         @Inject(forwardRef(() => AuthService))
         private readonly authService: AuthService,
-    ) { }
+    ) {}
 
     @UseGuards(JwtAuthGuard, RolesGuard)
     @Roles(UserRole.USER, UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.POC)
@@ -31,7 +45,12 @@ export class UserController {
         }
 
         const userObj = user.toObject ? user.toObject() : user;
-        const { passwordHash, verificationCode, verificationCodeExpiresAt, ...safeUser } = userObj as any;
+        const {
+            passwordHash,
+            verificationCode,
+            verificationCodeExpiresAt,
+            ...safeUser
+        } = userObj;
 
         return {
             user: {
@@ -46,14 +65,19 @@ export class UserController {
     @UseGuards(JwtAuthGuard, RolesGuard)
     @Roles(UserRole.USER, UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.POC)
     @Put('me')
-    async updateProfile(@Req() req: Request, @Body() updateData: { username?: string }) {
+    async updateProfile(
+        @Req() req: Request,
+        @Body() updateData: { username?: string },
+    ) {
         const userId = (req.user as any)?.userId;
         if (!userId) {
             throw new NotFoundException('User not found in token');
         }
-        
+
         if (updateData.username) {
-            const existingUser = await this.userService.findByUsername(updateData.username);
+            const existingUser = await this.userService.findByUsername(
+                updateData.username,
+            );
             if (existingUser && existingUser._id.toString() !== userId) {
                 throw new ConflictException('Username already taken');
             }
@@ -65,7 +89,12 @@ export class UserController {
         }
 
         const userObj = user.toObject ? user.toObject() : user;
-        const { passwordHash, verificationCode, verificationCodeExpiresAt, ...safeUser } = userObj as any;
+        const {
+            passwordHash,
+            verificationCode,
+            verificationCodeExpiresAt,
+            ...safeUser
+        } = userObj;
 
         return {
             message: 'Profile updated successfully',
@@ -73,26 +102,37 @@ export class UserController {
                 id: safeUser._id,
                 email: safeUser.email,
                 name: safeUser.username,
-            }
+            },
         };
     }
 
     @UseGuards(JwtAuthGuard, RolesGuard)
     @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
     @Post('invite')
-    async inviteUser(@Req() req: Request, @Body() inviteUserDto: InviteUserDto) {
+    async inviteUser(
+        @Req() req: Request,
+        @Body() inviteUserDto: InviteUserDto,
+    ) {
         const currentUser = req.user as any;
         let targetTenantId = currentUser?.tenantCode;
 
         // If SUPER_ADMIN provides a specific tenantId, use it
-        if (currentUser?.role === UserRole.SUPER_ADMIN && inviteUserDto.tenantId) {
+        if (
+            currentUser?.role === UserRole.SUPER_ADMIN &&
+            inviteUserDto.tenantId
+        ) {
             targetTenantId = inviteUserDto.tenantId;
         }
 
-        const user = await this.userService.create(inviteUserDto, targetTenantId);
+        const user = await this.userService.create(
+            inviteUserDto,
+            targetTenantId,
+        );
 
         // Generate and send verification code to the invited user
-        await this.authService.generateAndSendVerificationCode(inviteUserDto.email);
+        await this.authService.generateAndSendVerificationCode(
+            inviteUserDto.email,
+        );
 
         return { message: 'User invited successfully', userId: user._id };
     }
@@ -118,13 +158,18 @@ export class UserController {
             tenantCode,
             currentUser?.role,
             currentUser?.tenantCode,
-            search
+            search,
         );
 
         // Sanitize the users before returning
-        const safeUsers = result.users.map(user => {
+        const safeUsers = result.users.map((user) => {
             const userObj = user.toObject ? user.toObject() : user;
-            const { passwordHash, verificationCode, verificationCodeExpiresAt, ...safeUser } = userObj as any;
+            const {
+                passwordHash,
+                verificationCode,
+                verificationCodeExpiresAt,
+                ...safeUser
+            } = userObj;
             return {
                 id: safeUser._id,
                 email: safeUser.email,
