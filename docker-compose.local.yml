@@ -1,0 +1,41 @@
+version: "3.8"
+
+services:
+  mosquitto:
+    image: eclipse-mosquitto:latest
+    container_name: mosquitto
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - ./mosquitto/config:/mosquitto/config
+      - mosquitto_data:/mosquitto/data
+      - mosquitto_log:/mosquitto/log
+    networks:
+      - omnipark_net
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: omnipark_backend
+    ports:
+      - "3000:3000"
+    environment:
+      - MQTT_BROKER_URL=mqtt://mosquitto:1883
+    env_file:
+      - ./server/.env
+    networks:
+      - omnipark_net
+    depends_on:
+      - mosquitto
+    restart: unless-stopped
+
+networks:
+  omnipark_net:
+    driver: bridge
+
+volumes:
+  mosquitto_data:
+  mosquitto_log:
