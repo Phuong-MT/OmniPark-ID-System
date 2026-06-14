@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from "react";
 import { X, MapPin } from "lucide-react";
 import apiClient from "@/utils/api/axios";
+import { updateCurrentParkClusters } from "@/redux/features/adminParksSlice";
+import { useDispatch } from "react-redux";
 
 interface AddClusterActionProps {
 	parkId: string;
@@ -17,6 +19,7 @@ export function AddClusterAction({
 	mapContainerRef,
 	previewUrl,
 }: AddClusterActionProps) {
+	const dispatch = useDispatch();
 	const [clusters, setClusters] = useState<any[]>(initialClusters);
 	const [activeCluster, setActiveCluster] = useState<any | null>(null);
 	const [isAddingCluster, setIsAddingCluster] = useState<boolean>(false);
@@ -198,6 +201,7 @@ export function AddClusterAction({
 
 			if (res.data?.clusters) {
 				setClusters(res.data.clusters);
+				dispatch(updateCurrentParkClusters(res.data.clusters));
 			}
 			setActiveCluster(null);
 			setIsAddingCluster(false);
@@ -226,6 +230,7 @@ export function AddClusterAction({
 			const res = await apiClient.delete(`/parks/${parkId}/clusters/${activeCluster._id}`);
 			if (res.data?.clusters) {
 				setClusters(res.data.clusters);
+				dispatch(updateCurrentParkClusters(res.data.clusters));
 			}
 			setActiveCluster(null);
 			setIsAddingCluster(false);

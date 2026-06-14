@@ -4,6 +4,8 @@ import Link from "next/link";
 import { ArrowLeft, MapPin, Clock } from "lucide-react";
 import { AddParkDetailAction } from "./ParkDetailAction";
 import { ParkMapSection } from "./ParkMapSection";
+import { ClusterListContainer } from "./ClusterListContainer";
+import { ParkStoreHydrator } from "./hook/useParkStoreHydrator";
 
 export async function generateMetadata({ params }: { params: Promise<{ parkId: string }> }) {
 	const resolvedParams = await params;
@@ -40,6 +42,8 @@ export default async function ParkDetailPage({ params }: { params: Promise<{ par
 	}
 
 	return (
+        <>
+        <ParkStoreHydrator park={park} />
 		<div className="flex flex-col gap-6 max-w-4xl mx-auto w-full">
 			<div className="flex items-center justify-between gap-4">
 				<div className="flex items-center gap-4">
@@ -104,8 +108,11 @@ export default async function ParkDetailPage({ params }: { params: Promise<{ par
 				</div>
 			</div>
 
+            {/* List of cluster zone detail*/}
+            <ClusterListContainer />
 			{/* Park Map Section */}
-			<ParkMapSection parkId={park._id} map={park.map} initialClusters={park.clusters || []} />
+			<ParkMapSection parkId={park._id} map={park.map} />
 		</div>
+        </>
 	);
 }
