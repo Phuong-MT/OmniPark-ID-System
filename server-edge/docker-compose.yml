@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   mediamtx:
     image: bluenviron/mediamtx:latest
@@ -25,9 +23,20 @@ services:
     environment:
       - BACKEND_URL=http://host.docker.internal:3000
       - EDGE_NODE_ID=edge-default
+      - EDGE_STANDALONE=${EDGE_STANDALONE:-true}
+      - LOCAL_CAMERAS_JSON=${LOCAL_CAMERAS_JSON:-[]}
       - CAMERA_REFRESH_INTERVAL_SECONDS=15
       - BACKEND_TIMEOUT_SECONDS=10
       - EVENT_FORWARD_RETRIES=3
+      - EDGE_API_KEY=${EDGE_API_KEY:-}
+      - ONVIF_DISCOVERY_ENABLED=${ONVIF_DISCOVERY_ENABLED:-false}
+      - ONVIF_DISCOVERY_INTERVAL_SECONDS=60
+      - ONVIF_DISCOVERY_TIMEOUT_SECONDS=5
+      - STREAM_MONITOR_INTERVAL_SECONDS=15
+      - STREAM_OPEN_TIMEOUT_MS=5000
+      - STREAM_READ_TIMEOUT_MS=5000
+      - STREAM_PROBE_TIMEOUT_SECONDS=12
+      - MAX_MONITORED_CAMERAS=10
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/status')"]
       interval: 15s
@@ -35,21 +44,3 @@ services:
       retries: 5
     depends_on:
       - mediamtx
-
-  ai-service:
-    build:
-      context: ./ai-service
-    container_name: ai-service
-    restart: unless-stopped
-    environment:
-      - EDGE_API_URL=http://edge-api:8000
-      - CAMERA_REFRESH_INTERVAL_SECONDS=10
-      - TARGET_FPS=5
-      - EVENT_DISPATCH_RETRIES=3
-      - PLATE_DEBOUNCE_SECONDS=5
-      - STREAM_RECONNECT_DELAY_SECONDS=3
-      - STREAM_OPEN_TIMEOUT_MS=5000
-      - STREAM_READ_TIMEOUT_MS=5000
-    depends_on:
-      edge-api:
-        condition: service_healthy

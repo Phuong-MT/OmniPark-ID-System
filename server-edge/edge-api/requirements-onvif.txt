@@ -1,0 +1,3 @@
+-r requirements.txt
+WSDiscovery==2.0.0
+onvif-zeep==0.2.12
