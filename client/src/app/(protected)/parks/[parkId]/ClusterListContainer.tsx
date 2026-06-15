@@ -2,8 +2,10 @@
 import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
 
+const EMPTY_ARRAY: any[] = [];
+
 export function ClusterListContainer() {
-    const clusters = useSelector((state: RootState) => state.adminParks.currentPark?.clusters || []);
+    const clusters = useSelector((state: RootState) => state.adminParks.currentPark?.clusters || EMPTY_ARRAY);
     return (
         <>
             {clusters.map((cluster: any, index: number) => (

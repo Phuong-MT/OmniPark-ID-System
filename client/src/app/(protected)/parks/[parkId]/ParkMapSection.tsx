@@ -24,8 +24,10 @@ interface ParkMapSectionProps {
 
 type UploadStatus = "idle" | "previewing" | "uploading" | "success" | "error";
 
+const EMPTY_ARRAY: any[] = [];
+
 export function ParkMapSection({ parkId, map }: ParkMapSectionProps) {
-	const clusters = useSelector((state: RootState) => state.adminParks.currentPark?.clusters || []);
+	const clusters = useSelector((state: RootState) => state.adminParks.currentPark?.clusters || EMPTY_ARRAY);
 	const fileInputRef = useRef<HTMLInputElement>(null);
 	const mapContainerRef = useRef<HTMLDivElement>(null);
 
