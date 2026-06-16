@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { fetchParksList } from "./adminParksThunks";
+import { fetchParkCount, fetchParksList } from "./adminParksThunks";
 
 export interface ParkItem {
 	_id?: string;
@@ -28,6 +28,7 @@ interface AdminParksState {
 		search?: string;
 		status?: string;
 	};
+	totalDevices?: number;
 }
 
 const initialState: AdminParksState = {
@@ -38,6 +39,7 @@ const initialState: AdminParksState = {
 	loading: false,
 	error: null,
 	filters: {},
+	totalDevices: 0,
 };
 
 const adminParksSlice = createSlice({
@@ -93,7 +95,17 @@ const adminParksSlice = createSlice({
 			.addCase(fetchParksList.rejected, (state, action) => {
 				state.loading = false;
 				state.error = action.payload as string;
-			});
+			})
+			// fetch count parks
+			.addCase(fetchParkCount.fulfilled, (state, action)=>{
+				state.total = action.payload;
+			})
+			.addCase(fetchParkCount.pending, (state)=>{
+				state.loading = false;
+			})
+			.addCase(fetchParkCount.rejected, (state, action)=>{
+				state.error = action.payload as string;
+			})
 	},
 });
 
