@@ -30,7 +30,6 @@ async def process_camera_stream(camera, engine, dispatcher, frame_interval):
             
             # Use to_thread for blocking cv2/httpx read
             frame = await asyncio.to_thread(stream.read_frame)
-            
             if frame is not None:
                 # Show frame in debug mode (not recommended for multiple cameras, but kept for legacy)
                 if os.getenv("DEBUG_MODE", "false").lower() == "true":
@@ -40,7 +39,7 @@ async def process_camera_stream(camera, engine, dispatcher, frame_interval):
 
                 # Use to_thread for blocking inference
                 vehicles = await asyncio.to_thread(engine.infer, frame)
-                
+                print(f"vehicles: {vehicles}")
                 for vehicle in vehicles:
                     plate = vehicle.get("plate")
                     if plate and plate.get("text"):
@@ -72,7 +71,7 @@ async def process_camera_stream(camera, engine, dispatcher, frame_interval):
 async def main():
     logger.info("Starting AI Inference Service")
     
-    edge_api_url = os.getenv("EDGE_API_URL", "http://edge-api:8000")
+    edge_api_url = os.getenv("EDGE_API_URL", "http://localhost:8000")
     cameras = []
     
     async with httpx.AsyncClient() as client:
@@ -81,7 +80,11 @@ async def main():
                 logger.info(f"Fetching camera config from {edge_api_url}/cameras")
                 response = await client.get(f"{edge_api_url}/cameras", timeout=5.0)
                 if response.status_code == 200:
-                    cameras = response.json()
+                    # test ip webcam
+                    cameras = [{
+                        'id':"camera-Ip",
+                        'url': "rtsp://192.168.1.240:8080/h264.sdp"
+                    }]
                     if cameras:
                         logger.info(f"Received config for {len(cameras)} cameras: {[c.get('id') for c in cameras]}")
                         break
