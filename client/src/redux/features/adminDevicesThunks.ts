@@ -35,3 +35,20 @@ export const fetchDevicesList = createAsyncThunk(
         }
     }
 );
+
+export const fetchDeviceCount = createAsyncThunk(
+    "adminDevices/fetchDeviceCount",
+    async (_, { rejectWithValue, signal }) => {
+        try {
+            const response = await api.get("/devices/count", { signal });
+            return response.data; // Should return count (number)
+        } catch (error: any) {
+            if (error.name === "CanceledError" || error.code === "ERR_CANCELED") {
+                return rejectWithValue("Canceled");
+            }
+            return rejectWithValue(
+                error.response?.data?.message || "Failed to fetch device count"
+            );
+        }
+    }
+);

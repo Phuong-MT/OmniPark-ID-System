@@ -28,7 +28,6 @@ interface AdminParksState {
 		search?: string;
 		status?: string;
 	};
-	totalDevices?: number;
 }
 
 const initialState: AdminParksState = {
@@ -39,7 +38,6 @@ const initialState: AdminParksState = {
 	loading: false,
 	error: null,
 	filters: {},
-	totalDevices: 0,
 };
 
 const adminParksSlice = createSlice({

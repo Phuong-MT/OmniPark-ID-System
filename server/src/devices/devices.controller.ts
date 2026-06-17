@@ -17,6 +17,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../user/schema/user.schema';
+import { AssignmentsService } from '@/assignments/assignments.service';
 
 @Controller('devices')
 export class DevicesController {
@@ -25,10 +26,11 @@ export class DevicesController {
     constructor(
         private readonly devicesService: DevicesService,
         private readonly mqttService: MqttService,
+        private readonly assignmentsService: AssignmentsService,
     ) {}
 
     @UseGuards(JwtAuthGuard, RolesGuard)
-    @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+    @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.POC)
     @Get()
     async findAll(
         @Req() req,
@@ -46,6 +48,17 @@ export class DevicesController {
         const pageNum = parseInt(page, 10) || 1;
         const limitNum = parseInt(limit, 10) || 10;
 
+        if (user.role === UserRole.POC) {
+            const pocAssignments =
+                await this.assignmentsService.getPocAssignments(user.userId);
+            const parkIds = pocAssignments.map((a) => a.parkId.toString());
+            const clusterIds = await this.devicesService.getClusterIdsFromParks(parkIds);
+            return this.devicesService.findDevices(
+                { clusterIds, type, search },
+                pageNum,
+                limitNum,
+            );
+        }
         return this.devicesService.findDevices(
             { tenantCode: targetTenantCode, type, search },
             pageNum,
@@ -53,6 +66,28 @@ export class DevicesController {
         );
     }
 
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.POC)
+    @Get('count')
+    async count(@Req() req) {
+        const user = req.user;
+        const tenantCode =
+            user.role === UserRole.SUPER_ADMIN ? undefined : user.tenantCode;
+
+        if (user.role === UserRole.POC) {
+            const pocAssignments =
+                await this.assignmentsService.getPocAssignments(user.userId);
+            const parkIds = pocAssignments.map((a) => a.parkId.toString());
+            const clusterIds = await this.devicesService.getClusterIdsFromParks(parkIds);
+            return this.devicesService.countDevices({
+                clusterIds: clusterIds,
+            });
+        }
+
+        return this.devicesService.countDevices({
+            tenantCode: tenantCode,
+        });
+    }
     @MqttSubscribe(MQTT_TOPICS.HANDSHAKE_INIT)
     async handleHandshakeInit(message: HandshakeRequest) {
         const {

@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { fetchDevicesList } from "./adminDevicesThunks";
+import { fetchDevicesList, fetchDeviceCount } from "./adminDevicesThunks";
 
 export interface DeviceItem {
     _id?: string;
@@ -15,6 +15,7 @@ export interface DeviceItem {
 interface AdminDevicesState {
     devices: DeviceItem[];
     total: number;
+    totalActiveDevices: number;
     page: number;
     hasMore: boolean;
     loading: boolean;
@@ -29,6 +30,7 @@ interface AdminDevicesState {
 const initialState: AdminDevicesState = {
     devices: [],
     total: 0,
+    totalActiveDevices: 0,
     page: 1,
     hasMore: true,
     loading: false,
@@ -82,6 +84,18 @@ const adminDevicesSlice = createSlice({
                 state.hasMore = state.devices.length < action.payload.total;
             })
             .addCase(fetchDevicesList.rejected, (state, action) => {
+                state.loading = false;
+                state.error = action.payload as string;
+            })
+            // fetch device count
+            .addCase(fetchDeviceCount.pending, (state) => {
+                state.loading = true;
+            })
+            .addCase(fetchDeviceCount.fulfilled, (state, action) => {
+                state.loading = false;
+                state.totalActiveDevices = action.payload;
+            })
+            .addCase(fetchDeviceCount.rejected, (state, action) => {
                 state.loading = false;
                 state.error = action.payload as string;
             });
