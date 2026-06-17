@@ -77,6 +77,7 @@ export class DevicesService {
             status?: DeviceStatus;
             isOnline?: boolean;
             search?: string;
+            clusterIds?: string[] | Types.ObjectId[];
         },
         page: number = 1,
         limit: number = 10,
@@ -88,6 +89,16 @@ export class DevicesService {
 
         if (query.type) filter.type = query.type;
         if (query.status) filter.status = query.status;
+
+        if (query.clusterIds) {
+            if (query.clusterIds.length > 0) {
+                filter.clusterId = {
+                    $in: query.clusterIds.map((id) => new Types.ObjectId(id)),
+                };
+            } else {
+                filter.clusterId = { $in: [] };
+            }
+        }
 
         if (query.search) {
             filter.$or = [
@@ -390,6 +401,32 @@ export class DevicesService {
 
         await device.save();
 
+        // Update stats for cluster and park
+        if (Types.ObjectId.isValid(objectId)) {
+            const clusterIdObj = new Types.ObjectId(objectId);
+            const totalDevicesInCluster = await this.deviceModel.countDocuments({ clusterId: clusterIdObj });
+            
+            // Update cluster stats in the park
+            const updatedPark = await this.parkModel.findOneAndUpdate(
+                { 'clusters._id': clusterIdObj },
+                { $set: { 'clusters.$.stats.totalDevices': totalDevicesInCluster } },
+                { new: true }
+            );
+
+            if (updatedPark) {
+                // Calculate total devices for the park (sum of totalDevices across all clusters)
+                const parkTotalDevices = updatedPark.clusters.reduce(
+                    (sum, cluster) => sum + (cluster.stats?.totalDevices || 0),
+                    0
+                );
+                
+                await this.parkModel.updateOne(
+                    { _id: updatedPark._id },
+                    { $set: { 'stats.totalDevices': parkTotalDevices } }
+                );
+            }
+        }
+
         if (this.gateway) {
             this.gateway.notifyPairSuccess(device.macAddress, device);
         }
@@ -400,5 +437,51 @@ export class DevicesService {
             deviceName: device.deviceName,
             tenantCode: device.tenantCode,
         };
+    }
+
+    async getClusterIdsFromParks(parkIds: string[]): Promise<Types.ObjectId[]> {
+        if (!parkIds || parkIds.length === 0) return [];
+        const parks = await this.parkModel
+            .find({
+                _id: { $in: parkIds.map((id) => new Types.ObjectId(id)) },
+            })
+            .select('clusters._id')
+            .lean();
+
+        const clusterIds: Types.ObjectId[] = [];
+        for (const park of parks) {
+            if (park.clusters) {
+                for (const cluster of park.clusters) {
+                    if (cluster._id) {
+                        clusterIds.push(cluster._id);
+                    }
+                }
+            }
+        }
+        return clusterIds;
+    }
+
+    async countDevices(query: {
+        tenantCode?: string;
+        clusterIds?: string[] | Types.ObjectId[];
+        status?: DeviceStatus;
+    }): Promise<number> {
+        const filter: any = {};
+        if (query.tenantCode) {
+            filter.tenantCode = new Types.ObjectId(query.tenantCode);
+        }
+        if (query.status) {
+            filter.status = query.status;
+        }
+        if (query.clusterIds) {
+            if (query.clusterIds.length > 0) {
+                filter.clusterId = {
+                    $in: query.clusterIds.map((id) => new Types.ObjectId(id)),
+                };
+            } else {
+                filter.clusterId = { $in: [] };
+            }
+        }
+        return this.deviceModel.countDocuments(filter);
     }
 }

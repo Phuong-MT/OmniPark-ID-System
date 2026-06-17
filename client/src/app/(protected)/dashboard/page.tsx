@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, ShieldAlert, Activity } from "lucide-react";
-import { RoleBasedStats } from "./_components/RoleBasedStats";
+import { CheckCircle2, ShieldAlert } from "lucide-react";
+import { DashboardHeaderSection } from "./DashboardHeaderSection";
 
 export default function DashboardPage() {
 	return (
@@ -12,35 +12,7 @@ export default function DashboardPage() {
 					Welcome back! Here is what's happening today in the OmniPark System.
 				</p>
 			</div>
-
-			<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-				<RoleBasedStats />
-
-				<Card>
-					<CardHeader className="flex flex-row items-center justify-between pb-2">
-						<CardTitle className="text-sm font-medium">Current Occupancy</CardTitle>
-						<Activity className="h-4 w-4 text-zinc-500" />
-					</CardHeader>
-					<CardContent>
-						<div className="text-2xl font-bold">84%</div>
-						<p className="text-xs text-green-500 font-medium flex items-center gap-1 mt-1">
-							+2% from last hour
-						</p>
-					</CardContent>
-				</Card>
-
-				<Card>
-					<CardHeader className="flex flex-row items-center justify-between pb-2">
-						<CardTitle className="text-sm font-medium">System Health</CardTitle>
-						<CheckCircle2 className="h-4 w-4 text-green-500" />
-					</CardHeader>
-					<CardContent>
-						<div className="text-xl font-bold text-green-500">Operational</div>
-						<p className="text-xs text-zinc-500 mt-1">All systems nominal</p>
-					</CardContent>
-				</Card>
-			</div>
-
+			<DashboardHeaderSection/>
 			<div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
 				<Card className="lg:col-span-2">
 					<CardHeader>

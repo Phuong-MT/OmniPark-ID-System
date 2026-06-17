@@ -52,3 +52,17 @@ export const createNewPark = createAsyncThunk(
         }
     }
 );
+
+export const fetchParkCount = createAsyncThunk(
+    "adminParks/fetchParkCount",
+    async(_,{rejectWithValue, signal})=>{
+        try{
+            const response = await axiosClient.get("/parks/count", {signal});
+            return response.data;
+        }catch(error: any){
+            return rejectWithValue(
+                error.response?.data?.message || "Failed to fetch park count"
+            );
+        }
+    }
+)

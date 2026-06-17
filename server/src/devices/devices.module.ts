@@ -7,6 +7,7 @@ import { DevicesController } from './devices.controller';
 import { MqttModule } from 'src/mqtt/mqtt.module';
 import { SocketModule } from '../socket/socket.module';
 import { Park, ParkSchema } from 'src/parks/schema/park.schema';
+import { AssignmentsModule } from '@/assignments/assignments.module';
 
 @Module({
     imports: [
@@ -19,6 +20,7 @@ import { Park, ParkSchema } from 'src/parks/schema/park.schema';
         ),
         forwardRef(() => MqttModule),
         forwardRef(() => SocketModule),
+        forwardRef(() => AssignmentsModule)
     ],
     controllers: [DevicesController],
     providers: [DevicesService],
