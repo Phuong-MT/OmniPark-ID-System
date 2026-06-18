@@ -21,7 +21,7 @@ from engine.base import InferenceEngine
 logger = logging.getLogger(__name__)
 
 # Confidence threshold for plate detection — plates below this are discarded
-PLATE_CONF_THRESHOLD = 0.8
+PLATE_CONF_THRESHOLD = 0.6
 
 
 class YoloPipelineEngine(InferenceEngine):
