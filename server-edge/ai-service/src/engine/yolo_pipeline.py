@@ -13,7 +13,10 @@ try:
 except ImportError:
     easyocr = None
 
-from src.engine.base import InferenceEngine
+try:
+    from src.engine.base import InferenceEngine
+except ImportError:
+    from engine.base import InferenceEngine
 
 logger = logging.getLogger(__name__)
 
@@ -281,3 +284,45 @@ class YoloPipelineEngine(InferenceEngine):
                 })
 
         return vehicles
+
+    def draw_annotations(self, frame: np.ndarray, predictions: list[dict]) -> np.ndarray:
+        """
+        Draw bounding boxes, labels, and license plate texts onto the frame.
+        """
+        annotated = frame.copy()
+        
+        # Colors: BGR format
+        VEHICLE_COLOR = (255, 150, 0)  # Cyan/Orange
+        PLATE_COLOR = (0, 0, 255)       # Red
+        TEXT_COLOR = (255, 255, 255)    # White
+
+        for v in predictions:
+            # 1. Draw vehicle box if label is not unknown
+            if v["label"] != "unknown_vehicle" and v["confidence"] > 0:
+                v_box = [int(x) for x in v["bbox"]]
+                cv2.rectangle(annotated, (v_box[0], v_box[1]), (v_box[2], v_box[3]), VEHICLE_COLOR, 2)
+                
+                # Draw vehicle label background & text
+                label = f"{v['label']} {v['confidence']:.2f}"
+                (w, h), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
+                # Keep text box inside frame boundaries
+                text_y = max(v_box[1], h + 5)
+                cv2.rectangle(annotated, (v_box[0], text_y - h - 5), (v_box[0] + w, text_y), VEHICLE_COLOR, -1)
+                cv2.putText(annotated, label, (v_box[0], text_y - 3), cv2.FONT_HERSHEY_SIMPLEX, 0.5, TEXT_COLOR, 1, cv2.LINE_AA)
+
+            # 2. Draw plate box & OCR text if present
+            plate = v.get("plate")
+            if plate:
+                p_box = [int(x) for x in plate["bbox"]]
+                cv2.rectangle(annotated, (p_box[0], p_box[1]), (p_box[2], p_box[3]), PLATE_COLOR, 2)
+                
+                text = plate.get("text", "")
+                if text:
+                    label = f"PLATE: {text}"
+                    (w, h), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2)
+                    # Keep text box inside frame boundaries
+                    text_y = max(p_box[1], h + 6)
+                    cv2.rectangle(annotated, (p_box[0], text_y - h - 6), (p_box[0] + w, text_y), PLATE_COLOR, -1)
+                    cv2.putText(annotated, label, (p_box[0], text_y - 4), cv2.FONT_HERSHEY_SIMPLEX, 0.6, TEXT_COLOR, 2, cv2.LINE_AA)
+        
+        return annotated

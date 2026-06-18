@@ -6,12 +6,12 @@ services:
         container_name: mediamtx
         restart: unless-stopped
         ports:
-            - "8554:8554" # RTSP
-            - "1935:1935" # RTMP
-            - "8888:8888" # HLS
-            - "8889:8889" # WebRTC
-            - "8189:8189" # WebRTC TCP
-            - "9997:9997" # API
+            - "8554:8554"    # RTSP
+            - "1935:1935"    # RTMP
+            - "8888:8888"    # HLS
+            - "8889:8889"    # WebRTC (signaling)
+            - "8189:8189/udp" # WebRTC (media UDP)
+            - "9997:9997"    # API
         volumes:
             - ./mediamtx.yml:/mediamtx.yml
 
@@ -27,14 +27,14 @@ services:
         depends_on:
             - mediamtx
 
-    # ai-service:
-    #   build:
-    #     context: ./ai-service
-    #   container_name: ai-service
-    #   restart: unless-stopped
-    #   environment:
-    #     - MEDIAMTX_RTSP_URL=rtsp://mediamtx:8554/mystream
-    #     - EDGE_API_URL=http://edge-api:8000
-    #   depends_on:
-    #     - mediamtx
-    #     - edge-api
+    ai-service:
+        build:
+            context: ./ai-service
+        container_name: ai-service
+        restart: unless-stopped
+        environment:
+            - MEDIAMTX_RTSP_URL=rtsp://mediamtx:8554
+            - EDGE_API_URL=http://edge-api:8000
+        depends_on:
+            - mediamtx
+            - edge-api
