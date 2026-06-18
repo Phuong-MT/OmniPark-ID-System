@@ -6,11 +6,14 @@ import { DBName } from '../utils/connectDB';
 import { Park, ParkSchema } from './schema/park.schema';
 import { AssignmentsModule } from '../assignments/assignments.module';
 import { CloudinaryModule } from '../cloudinary/cloudinary.module';
-
+import { Device, DeviceSchema } from '@/devices/schema/devices.schema';
 @Module({
     imports: [
         MongooseModule.forFeature(
-            [{ name: Park.name, schema: ParkSchema }],
+            [
+                { name: Park.name, schema: ParkSchema },
+                { name: Device.name, schema: DeviceSchema },
+            ],
             DBName.omniparkIDSystem,
         ),
         AssignmentsModule,

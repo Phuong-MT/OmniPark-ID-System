@@ -8,6 +8,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { DBName } from '../utils/connectDB';
 import { Park, ParkDocument } from './schema/park.schema';
+import { Device, DeviceDocument } from '@/devices/schema/devices.schema';
 
 @Injectable()
 export class ParksService {
@@ -15,6 +16,8 @@ export class ParksService {
     constructor(
         @InjectModel(Park.name, DBName.omniparkIDSystem)
         private readonly parkModel: Model<ParkDocument>,
+        @InjectModel(Device.name, DBName.omniparkIDSystem)
+        private readonly deviceModel: Model<DeviceDocument>,
     ) {}
 
     async findParks(
@@ -306,12 +309,7 @@ export class ParksService {
         return updated;
     }
 
-    async countParks(
-        query: {
-            tenantCode?: string;
-            parkIds?: string[];
-        },
-    ) {
+    async countParks(query: { tenantCode?: string; parkIds?: string[] }) {
         const filter: any = {};
         if (query.tenantCode) {
             filter.tenantCode = new Types.ObjectId(query.tenantCode);
@@ -328,5 +326,18 @@ export class ParksService {
 
         const count = await this.parkModel.countDocuments(filter);
         return count;
+    }
+
+    async getDevicesInCluster(tenantCode: string, clusterId: string) {
+        if (!Types.ObjectId.isValid(clusterId)) {
+            throw new BadRequestException(
+                'Invalid Park ID or Cluster ID format',
+            );
+        }
+        const filter: any = { clusterId: new Types.ObjectId(clusterId) };
+        if (tenantCode) {
+            filter.tenantCode = new Types.ObjectId(tenantCode);
+        }
+        return this.deviceModel.find(filter);
     }
 }

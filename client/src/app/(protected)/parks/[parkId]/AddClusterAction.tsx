@@ -272,12 +272,15 @@ export function AddClusterAction({
 							}}
 							onMouseDown={(e) => handleStartDrag(e, cluster)}
 							onTouchStart={(e) => handleStartDrag(e, cluster)}
-							className={`p-1.5 rounded-full shadow-lg border-2 transition-colors ${
+							className={`p-1.5 rounded-full shadow-lg border-2 transition-colors flex flex-col justify-center items-center gap-1 ${
 								isEditing
 									? "bg-indigo-600 border-white text-white"
 									: "bg-white border-indigo-600 text-indigo-600 hover:bg-indigo-50 dark:bg-zinc-900 dark:border-indigo-400 dark:text-indigo-400"
 							}`}
 						>
+							<div className={`text-xs max-w-[32px] truncate ${isEditing ? "text-white" : ""}`}>
+								{cluster.name || "new-cluster"}
+							</div>
 							<MapPin className="h-5 w-5" />
 						</div>
 					</div>
