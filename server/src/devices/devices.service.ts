@@ -13,6 +13,7 @@ import {
     DeviceStatus,
     DevicePairState,
     DeviceType,
+    GATE_TYPE
 } from './schema/devices.schema';
 import { DBName } from 'src/utils/connectDB';
 import { Park, ParkDocument } from 'src/parks/schema/park.schema';
@@ -483,5 +484,85 @@ export class DevicesService {
             }
         }
         return this.deviceModel.countDocuments(filter);
+    }
+
+    // =========================
+    // ADD CAMERA LPR TO GATE
+    // =========================
+    async addCameraToGate(payload: {
+        gateId: string;
+        gateType: GATE_TYPE;
+        cameraUrl: string;
+        deviceName?: string;
+        macAddress: string;
+        hostname?: string;
+        localIp?: string;
+        subnetMask?: string;
+    }) {
+        const gate = await this.deviceModel.findById(payload.gateId);
+        if (!gate) {
+            throw new NotFoundException('Gate device not found');
+        }
+        if (gate.type !== DeviceType.GATE) {
+            throw new Error('Target device is not a GATE');
+        }
+
+        const cameraLprs = gate.cameraLprs || [];
+        if (cameraLprs.length >= 2) {
+            throw new Error('Gate already has the maximum of 2 LPR cameras');
+        }
+
+        // Check duplicate gateType slot
+        const alreadyHasType = cameraLprs.some((c) => c.gateType === payload.gateType);
+        if (alreadyHasType) {
+            throw new Error(`Gate already has a ${payload.gateType} camera assigned`);
+        }
+
+        // Create the camera device inheriting gate's tenant + cluster
+        const macUpper = payload.macAddress.toUpperCase();
+        const existingCamera = await this.deviceModel.findOne({ macAddress: macUpper });
+        let camera: DeviceDocument;
+
+        if (existingCamera) {
+            existingCamera.cameraUrl = payload.cameraUrl;
+            if (payload.deviceName) existingCamera.deviceName = payload.deviceName;
+            existingCamera.clusterId = gate.clusterId;
+            existingCamera.tenantCode = gate.tenantCode;
+            await existingCamera.save();
+            camera = existingCamera;
+        } else {
+            camera = await this.deviceModel.create({
+                macAddress: macUpper,
+                type: DeviceType.CAMERA_LRP,
+                deviceName: payload.deviceName || `CAM_LPR_${macUpper.slice(-5)}`,
+                cameraUrl: payload.cameraUrl,
+                hostname: payload.hostname || `cam-${macUpper.replace(/:/g, '').toLowerCase()}`,
+                localIp: payload.localIp || '0.0.0.0',
+                subnetMask: payload.subnetMask || '255.255.255.0',
+                status: DeviceStatus.ACTIVE,
+                pairState: DevicePairState.PAIRED,
+                clusterId: gate.clusterId,
+                tenantCode: gate.tenantCode,
+            });
+        }
+
+        // Link camera to gate
+        gate.cameraLprs = [
+            ...cameraLprs,
+            { cameraId: camera._id as Types.ObjectId, gateType: payload.gateType },
+        ];
+        await gate.save();
+
+        return {
+            gate: await this.deviceModel
+                .findById(gate._id)
+                .populate({
+                    path: 'cameraLprs.cameraId',
+                    model: 'Device',
+                    select: 'deviceName macAddress cameraUrl localIp status type',
+                })
+                .lean(),
+            camera,
+        };
     }
 }

@@ -10,6 +10,11 @@ export enum DeviceType {
     CAMERA_FACE = 'CAMERA_FACE',
 }
 
+export enum GATE_TYPE{
+    EXIT = 'EXIT',
+    ENTRY = 'ENTRY'
+}
+
 export enum DeviceStatus {
     ACTIVE = 'ACTIVE',
     INACTIVE = 'INACTIVE',
@@ -95,6 +100,34 @@ export class Device {
     // Parks Clusters embeded
     @Prop({ type: Types.ObjectId })
     clusterId?: Types.ObjectId;
+
+    // cameraLPR reference for gate
+    @Prop({
+        type: [{
+            _id: false,
+            cameraId: {
+                type: Types.ObjectId,
+                ref: 'Device',
+                required: true,
+            },
+            gateType: {
+                type: String,
+                enum: GATE_TYPE,
+                required: true,
+            },
+        }],
+        validate: {
+            validator: (v: any[]) => v.length <= 2,
+            message: 'Gate can have at most 2 LPR cameras',
+        },
+    })
+    cameraLprs?: {
+        cameraId: Types.ObjectId;
+        gateType: GATE_TYPE;
+    }[];
+    // url for camera 
+    @Prop({type: String})
+    cameraUrl?: string;
 }
 
 export const DeviceSchema = SchemaFactory.createForClass(Device);

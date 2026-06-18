@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ArrowLeft, MapPin, Clock } from "lucide-react";
 import { AddParkDetailAction } from "./ParkDetailAction";
 import { ParkMapSection } from "./ParkMapSection";
-import { ClusterListContainer } from "./ClusterListContainer";
+import { ClusterListContainer } from "./clusterLissContainer/ClusterListContainer";
 import { ParkStoreHydrator } from "./hook/useParkStoreHydrator";
 
 export async function generateMetadata({ params }: { params: Promise<{ parkId: string }> }) {

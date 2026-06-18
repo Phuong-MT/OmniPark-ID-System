@@ -338,6 +338,13 @@ export class ParksService {
         if (tenantCode) {
             filter.tenantCode = new Types.ObjectId(tenantCode);
         }
-        return this.deviceModel.find(filter);
+        return this.deviceModel
+            .find(filter)
+            .populate({
+                path: 'cameraLprs.cameraId',
+                model: 'Device',
+                select: 'deviceName macAddress cameraUrl localIp status type',
+            })
+            .lean();
     }
 }
