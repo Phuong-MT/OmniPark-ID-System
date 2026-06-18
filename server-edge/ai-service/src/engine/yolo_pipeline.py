@@ -13,10 +13,7 @@ try:
 except ImportError:
     easyocr = None
 
-try:
-    from src.engine.base import InferenceEngine
-except ImportError:
-    from engine.base import InferenceEngine
+from engine.base import InferenceEngine
 
 logger = logging.getLogger(__name__)
 

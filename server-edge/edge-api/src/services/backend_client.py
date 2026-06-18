@@ -1,7 +1,8 @@
 import os
 import httpx
 import logging
-from src.models.event import EdgeEvent
+
+from models.event import EdgeEvent
 
 logger = logging.getLogger(__name__)
 

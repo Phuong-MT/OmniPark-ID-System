@@ -2,8 +2,8 @@ import logging
 from fastapi import APIRouter, BackgroundTasks, WebSocket, WebSocketDisconnect
 from typing import List
 
-from src.models.event import EdgeEvent
-from src.services.backend_client import forward_event_to_backend
+from models.event import EdgeEvent
+from services.backend_client import forward_event_to_backend
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/events", tags=["events"])

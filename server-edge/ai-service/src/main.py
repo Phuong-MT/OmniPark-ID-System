@@ -11,16 +11,10 @@ root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, root_dir)
 sys.path.insert(0, os.path.join(root_dir, "src"))
 
-try:
-    from src.stream.consumer import StreamConsumer
-    from src.stream.publisher import StreamPublisher
-    from src.engine.yolo_pipeline import YoloPipelineEngine
-    from src.events.dispatcher import EventDispatcher
-except ImportError:
-    from stream.consumer import StreamConsumer
-    from stream.publisher import StreamPublisher
-    from engine.yolo_pipeline import YoloPipelineEngine
-    from events.dispatcher import EventDispatcher
+from stream.consumer import StreamConsumer
+from stream.publisher import StreamPublisher
+from engine.yolo_pipeline import YoloPipelineEngine
+from events.dispatcher import EventDispatcher
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
