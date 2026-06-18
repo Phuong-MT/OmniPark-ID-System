@@ -1,13 +1,18 @@
 import logging
+import os
+import sys
+
+# Support local run: add edge-api root and edge-api/src to Python path
+root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, root_dir)
+sys.path.insert(0, os.path.join(root_dir, "src"))
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
-from src.api.events import router as events_router
-
-logging.basicConfig(level=logging.INFO)
-
 from contextlib import asynccontextmanager
-from src.services.backend_client import fetch_cameras_config
+
+from api.events import router as events_router
+from services.backend_client import fetch_cameras_config
 
 # Global state to hold camera config
 app_state = {

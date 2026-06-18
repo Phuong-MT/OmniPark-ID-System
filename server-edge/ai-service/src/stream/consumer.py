@@ -1,5 +1,6 @@
 import cv2
 import logging
+import os
 import time
 import numpy as np
 import httpx
@@ -34,7 +35,12 @@ class StreamConsumer:
         else:
             # Support local webcam by converting "0", "1", etc. to integers
             source = int(self.url) if str(self.url).isdigit() else self.url
-            self.cap = cv2.VideoCapture(source)
+            if str(source).startswith("rtsp://"):
+                os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;tcp"
+            self.cap = cv2.VideoCapture(source, cv2.CAP_FFMPEG)
+            logger.info(
+                f"VideoCapture opened={self.cap.isOpened()} source={source}"
+            )
             if not self.cap.isOpened():
                 logger.error(f"Failed to open video stream: {source}")
                 return False
@@ -74,6 +80,8 @@ class StreamConsumer:
                 self.close()
                 return None
             
+            # if ret:
+            #     logger.info(f"Frame shape={frame.shape}")
             return frame
 
     def close(self):

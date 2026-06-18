@@ -1,16 +1,20 @@
 import os
 import sys
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 import time
 import asyncio
 import logging
 import cv2
 import httpx
 
-from src.stream.consumer import StreamConsumer
-from src.engine.yolo_pipeline import YoloPipelineEngine
-from src.events.dispatcher import EventDispatcher
+# Add server-edge/ai-service and server-edge/ai-service/src to Python path for local testing
+root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, root_dir)
+sys.path.insert(0, os.path.join(root_dir, "src"))
+
+from stream.consumer import StreamConsumer
+from stream.publisher import StreamPublisher
+from engine.yolo_pipeline import YoloPipelineEngine
+from events.dispatcher import EventDispatcher
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -23,24 +27,77 @@ async def process_camera_stream(camera, engine, dispatcher, frame_interval):
     logger.info(f"Starting stream processing for camera: {camera_id} at {url}")
     
     stream = StreamConsumer(url)
+    publisher = None
     
-    try:
-        while True:
-            start_time = time.time()
-            
-            # Use to_thread for blocking cv2/httpx read
-            frame = await asyncio.to_thread(stream.read_frame)
-            
-            if frame is not None:
-                # Show frame in debug mode (not recommended for multiple cameras, but kept for legacy)
-                if os.getenv("DEBUG_MODE", "false").lower() == "true":
-                    cv2.imshow(f"Test - {camera_id}", frame)
-                    if cv2.waitKey(1) & 0xFF == 27:
-                        break
+    latest_frame = None
+    predictions_state = []
+    new_frame_event = asyncio.Event()
 
-                # Use to_thread for blocking inference
-                vehicles = await asyncio.to_thread(engine.infer, frame)
+    async def stream_writer_loop():
+        nonlocal publisher, latest_frame
+        try:
+            while True:
+                # Capture frame (blocking call, use to_thread)
+                frame = await asyncio.to_thread(stream.read_frame)
+                if frame is None:
+                    await asyncio.sleep(0.01)
+                    continue
                 
+                latest_frame = frame
+                new_frame_event.set()
+                
+                # Setup publisher on first frame
+                if publisher is None:
+                    target_w = int(os.getenv("STREAM_WIDTH", "640"))
+                    h, w = frame.shape[:2]
+                    if w > target_w:
+                        target_h = int(h * (target_w / w))
+                        pub_w, pub_h = target_w, target_h
+                    else:
+                        pub_w, pub_h = w, h
+
+                    base_rtsp_url = os.getenv("MEDIAMTX_RTSP_URL", "rtsp://localhost:8554")
+                    publish_url = f"{base_rtsp_url}/detect_{camera_id}"
+                    publisher = StreamPublisher(publish_url, pub_w, pub_h, fps=TARGET_FPS)
+                    await asyncio.to_thread(publisher.start)
+                
+                # Draw latest annotations
+                annotated_frame = engine.draw_annotations(frame, predictions_state)
+                
+                # Resize to target stream resolution if needed
+                h, w = annotated_frame.shape[:2]
+                if w != publisher.width or h != publisher.height:
+                    annotated_frame = cv2.resize(annotated_frame, (publisher.width, publisher.height), interpolation=cv2.INTER_AREA)
+                
+                # Stream the annotated frame
+                if publisher:
+                    await asyncio.to_thread(publisher.write_frame, annotated_frame)
+                
+                # Small sleep to yield control
+                await asyncio.sleep(0.001)
+
+        except asyncio.CancelledError:
+            logger.info(f"Stream writer loop for {camera_id} cancelled")
+        except Exception as e:
+            logger.error(f"Error in stream writer loop: {str(e)}")
+
+    async def inference_loop():
+        nonlocal predictions_state
+        try:
+            while True:
+                # Wait for a new frame
+                await new_frame_event.wait()
+                new_frame_event.clear()
+                
+                frame_to_process = latest_frame
+                if frame_to_process is None:
+                    continue
+                
+                # Run AI inference (blocking, use to_thread)
+                vehicles = await asyncio.to_thread(engine.infer, frame_to_process)
+                predictions_state = vehicles
+                
+                # Dispatch events
                 for vehicle in vehicles:
                     plate = vehicle.get("plate")
                     if plate and plate.get("text"):
@@ -53,26 +110,36 @@ async def process_camera_stream(camera, engine, dispatcher, frame_interval):
                                 bbox=plate["bbox"]
                             )
                         )
-                        
-            elapsed = time.time() - start_time
-            sleep_time = frame_interval - elapsed
-            if sleep_time > 0:
-                await asyncio.sleep(sleep_time)
-            else:
-                await asyncio.sleep(0.001)
+                
+                # Throttle inference loop to prevent maxing CPU
+                await asyncio.sleep(frame_interval)
 
+        except asyncio.CancelledError:
+            logger.info(f"Inference loop for {camera_id} cancelled")
+        except Exception as e:
+            logger.error(f"Error in inference loop: {str(e)}")
+
+    writer_task = asyncio.create_task(stream_writer_loop())
+    inference_task = asyncio.create_task(inference_loop())
+    
+    try:
+        await asyncio.gather(writer_task, inference_task)
     except asyncio.CancelledError:
-        logger.info(f"Task for camera {camera_id} was cancelled")
+        writer_task.cancel()
+        inference_task.cancel()
+        await asyncio.gather(writer_task, inference_task, return_exceptions=True)
     except Exception as e:
-        logger.error(f"Error processing camera {camera_id}: {str(e)}")
+        logger.error(f"Error in process_camera_stream tasks: {str(e)}")
     finally:
         stream.close()
+        if publisher:
+            await asyncio.to_thread(publisher.close)
         cv2.destroyAllWindows()
 
 async def main():
     logger.info("Starting AI Inference Service")
     
-    edge_api_url = os.getenv("EDGE_API_URL", "http://edge-api:8000")
+    edge_api_url = os.getenv("EDGE_API_URL", "http://localhost:8000")
     cameras = []
     
     async with httpx.AsyncClient() as client:
@@ -81,7 +148,11 @@ async def main():
                 logger.info(f"Fetching camera config from {edge_api_url}/cameras")
                 response = await client.get(f"{edge_api_url}/cameras", timeout=5.0)
                 if response.status_code == 200:
-                    cameras = response.json()
+                    # test ip webcam
+                    cameras = [{
+                        'id':"camera-Ip",
+                        'url': "rtsp://192.168.1.3:8080/h264.sdp"
+                    }]
                     if cameras:
                         logger.info(f"Received config for {len(cameras)} cameras: {[c.get('id') for c in cameras]}")
                         break
