@@ -9,7 +9,8 @@ import Link from "next/link";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState, AppDispatch } from "@/redux/store";
 import { fetchParksList } from "@/redux/features/adminParksThunks";
-import { setFilters } from "@/redux/features/adminParksSlice";
+import { ParkItem, setFilters } from "@/redux/features/adminParksSlice";
+import { map } from "framer-motion/client";
 
 export function ParkManagement({ currentUserRole }: { currentUserRole: string }) {
 	const dispatch = useDispatch<AppDispatch>();
@@ -20,7 +21,7 @@ export function ParkManagement({ currentUserRole }: { currentUserRole: string })
 
 	const [searchTerm, setSearchTerm] = React.useState("");
 	const loaderRef = useRef<HTMLDivElement>(null);
-	const [selectedPark, setSelectedPark] = React.useState<string | null>(null);
+	const [selectedPark, setSelectedPark] = React.useState<ParkItem | null>(null);
 
 	// Debounce search input
 	useEffect(() => {
@@ -111,14 +112,14 @@ export function ParkManagement({ currentUserRole }: { currentUserRole: string })
 				</div>
 			</div>
 
-			<div className="grid gap-6 md:grid-cols-3">
-				<div className="md:col-span-2 flex flex-col gap-4">
-					<div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
+			<div className="grid gap-6 lg:grid-cols-4">
+				<div className="lg:col-span-3 flex flex-col gap-4">
+					<div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
 						{parks.map((park) => (
 							<Card
 								key={park._id}
-								className={`cursor-pointer transition-colors ${selectedPark === park._id ? "border-blue-500 dark:border-blue-500 ring-1 ring-blue-500" : "hover:border-blue-300 dark:hover:border-blue-700"}`}
-								onClick={() => setSelectedPark(park._id!)}
+								className={`cursor-pointer transition-colors ${selectedPark?._id === park._id ? "border-blue-500 dark:border-blue-500 ring-1 ring-blue-500" : "hover:border-blue-300 dark:hover:border-blue-700"}`}
+								onClick={() => setSelectedPark(park)}
 							>
 								<CardHeader className="pb-2">
 									<div className="flex items-center justify-between gap-2">
@@ -152,12 +153,12 @@ export function ParkManagement({ currentUserRole }: { currentUserRole: string })
 											{park.stats?.totalDevices || 0}
 										</span>
 									</div>
-									<div className="flex justify-between items-center text-sm mt-1">
+									{/* <div className="flex justify-between items-center text-sm mt-1">
 										<span className="text-zinc-500">Online Devices:</span>
 										<span className="font-medium text-green-600 dark:text-green-400">
 											{park.stats?.onlineDevices || 0}
 										</span>
-									</div>
+									</div> */}
 									<div className="flex justify-between items-center text-sm mt-4 pt-4 border-t border-zinc-100 dark:border-zinc-800">
 										<Link
 											href={`/parks/${park._id}`}
@@ -183,23 +184,33 @@ export function ParkManagement({ currentUserRole }: { currentUserRole: string })
 				</div>
 
 				{/* Map Preview Panel */}
-				<div className="hidden md:block">
-					<Card className="h-full min-h-[400px] flex flex-col sticky top-6">
+				<div className="hidden lg:block lg:col-span-1">
+					<Card className="flex flex-col sticky top-6">
 						<CardHeader>
 							<CardTitle>Map Preview</CardTitle>
 						</CardHeader>
+
 						<CardContent className="flex-1 flex flex-col">
-							<div className="flex-1 rounded-md bg-zinc-100 dark:bg-zinc-800/50 flex items-center justify-center border border-zinc-200 dark:border-zinc-800 relative overflow-hidden">
-								<div className="absolute inset-0 bg-[url('https://maps.googleapis.com/maps/api/staticmap?center=40.714728,-73.998672&zoom=12&size=400x400&sensor=false')] bg-cover opacity-20 grayscale" />
-								<div className="flex flex-col items-center gap-2 relative z-10 text-zinc-500 dark:text-zinc-400">
-									<MapIcon
-										className={`h-8 w-8 ${selectedPark ? "text-blue-500" : "text-zinc-400"}`}
-									/>
-									<span className="text-sm font-medium text-center px-4">
-										{selectedPark
-											? `Showing view for ${parks.find((p) => p._id === selectedPark)?.name}`
-											: "Select a park to view its map layout"}
-									</span>
+							<div className="w-full max-w-[256px] aspect-square rounded-md bg-zinc-100 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-800 relative overflow-hidden mx-auto flex items-center justify-center">
+								{!selectedPark?.map?.image?.thumbnail && (
+									<div className="absolute inset-0 bg-[url('https://maps.googleapis.com/maps/api/staticmap?center=40.714728,-73.998672&zoom=12&size=256x256&sensor=false')] bg-cover opacity-20 grayscale" />
+								)}
+
+								<div className="relative z-10 flex flex-col items-center gap-2 text-zinc-500 dark:text-zinc-400 w-full h-full justify-center">
+									{selectedPark && selectedPark.map?.image?.thumbnail ? (
+										<img
+											src={selectedPark.map.image.thumbnail}
+											alt="Park map"
+											className="w-full h-full object-contain rounded-lg bg-zinc-50 dark:bg-zinc-900"
+										/>
+									) : (
+										<>
+											<MapIcon className="h-8 w-8 text-zinc-400" />
+											<span className="text-xs font-medium text-center px-4">
+												{selectedPark ? "No map image available" : "Select a park to view its map layout"}
+											</span>
+										</>
+									)}
 								</div>
 							</div>
 						</CardContent>

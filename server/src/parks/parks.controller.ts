@@ -69,6 +69,31 @@ export class ParksController {
         );
     }
 
+    // Get count total parks
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.POC)
+    @Get('count')
+    async count(@Req() req){
+        const user = req.user;
+        const tenantCode =
+            user.role === UserRole.SUPER_ADMIN ? undefined : user.tenantCode;
+
+        let count = 0;
+        if (user.role === UserRole.POC) {
+            const pocAssignments =
+                await this.assignmentsService.getPocAssignments(user.userId);
+            const parkIds = pocAssignments.map((a) => a.parkId.toString());
+            count = await this.parksService.countParks({
+                parkIds: parkIds,
+            });
+        } else {
+            count = await this.parksService.countParks({
+                tenantCode: tenantCode,
+            });
+        }
+        return count;
+    }
+
     @UseGuards(JwtAuthGuard, RolesGuard)
     @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
     @Post()

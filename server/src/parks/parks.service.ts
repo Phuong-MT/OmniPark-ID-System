@@ -305,4 +305,28 @@ export class ParksService {
 
         return updated;
     }
+
+    async countParks(
+        query: {
+            tenantCode?: string;
+            parkIds?: string[];
+        },
+    ) {
+        const filter: any = {};
+        if (query.tenantCode) {
+            filter.tenantCode = new Types.ObjectId(query.tenantCode);
+        }
+        if (query.parkIds && query.parkIds.length > 0) {
+            filter._id = {
+                $in: query.parkIds.map((id: string) => new Types.ObjectId(id)),
+            };
+        }
+        if (query.parkIds && query.parkIds.length === 0) {
+            // Force empty result if POC has no assignments
+            filter._id = { $in: [] };
+        }
+
+        const count = await this.parkModel.countDocuments(filter);
+        return count;
+    }
 }
