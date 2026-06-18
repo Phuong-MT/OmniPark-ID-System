@@ -10,6 +10,7 @@ import {
 import { Server, Socket } from 'socket.io';
 import { DevicesService } from '../devices/devices.service';
 import { Inject, Injectable, Logger, forwardRef } from '@nestjs/common';
+import { SocketEdge } from './socket.edge';
 
 @WebSocketGateway({
     path: '/socket',
@@ -27,9 +28,12 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     constructor(
         @Inject(forwardRef(() => DevicesService))
         private readonly devicesService: DevicesService,
+        @Inject(forwardRef(()=>SocketEdge))
+        private readonly socketEdge: SocketEdge
     ) {}
     afterInit() {
         this.devicesService.registerGateway(this);
+        this.socketEdge.registerGateway(this);
     }
 
     handleConnection(client: Socket) {
@@ -38,6 +42,14 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     handleDisconnect(client: Socket) {
         this.logger.log(`Client disconnected: ${client.id}`);
+    }
+
+    @SubscribeMessage('edge_identify')
+    handleEdgeIdentify(
+        @ConnectedSocket() client: Socket,
+        @MessageBody() data: { tenantCode: string },
+    ) {
+        return this.socketEdge.handleEdgeIdentify(client, data);
     }
 
     @SubscribeMessage('request_pairing_list')

@@ -2,6 +2,15 @@ import logging
 import os
 import sys
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(levelname)s - %(name)s - %(message)s",
+    force=True,
+)
+
+from dotenv import load_dotenv
+load_dotenv()
+
 # Support local run: add edge-api root and edge-api/src to Python path
 root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, root_dir)
@@ -13,7 +22,7 @@ from contextlib import asynccontextmanager
 
 from api.events import router as events_router
 from services.backend_client import fetch_cameras_config
-
+from services.socket_client import socket_client
 # Global state to hold camera config
 app_state = {
     "cameras": []
@@ -25,13 +34,18 @@ async def lifespan(app: FastAPI):
     logging.info("Starting edge-api, fetching camera configs from backend...")
     cameras = await fetch_cameras_config()
     app_state["cameras"] = cameras
-    
+
     # Ideally, here we would also push this config to MediaMTX via its HTTP API
     # to dynamically create RTSP paths if they don't exist.
-    
+
+    # Connect to cloud server via Socket.IO
+    await socket_client.connect()
+
     yield
+
     # Shutdown logic
     logging.info("Shutting down edge-api...")
+    await socket_client.disconnect()
 
 app = FastAPI(
     title="OmniPark Edge API",
