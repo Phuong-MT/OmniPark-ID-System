@@ -131,11 +131,31 @@ class SocketClient:
                 )
             except Exception as e:
                 logger.error(f"SocketClient: failed to reload config: {e}")
+        @sio.on("get_camera_webrtc_url")
+        async def on_get_camera_webrtc_url(data):
+            """
+            Cloud requests WebRTC stream URL for a specific camera.
+            Format of MediaMTX stream path: <tenantCode>_<cameraId>
+            We reply back with the WebRTC WHEP url on port 8889.
+            """
+            camera_id = data.get("cameraId")
+            requester_socket_id = data.get("requesterSocketId")
+            logger.info(f"SocketClient: received 'get_camera_webrtc_url' for camera {camera_id}")
+            
+            # Đọc domain/IP của Edge từ ENV (hoặc default localhost nếu chạy dev). 
+            # Vì MediaMTX đứng sau NAT, Client cần biết IP của Edge để connect trực tiếp WebRTC.
+            edge_host = os.getenv("EDGE_PUBLIC_HOST", "localhost")
+            
+            # WHEP stream URL của MediaMTX (WHEP client POST offer to /<stream_path>/whep)
+            stream_url = f"http://{edge_host}:8889/detect_{camera_id}"
 
-        @sio.on("*")
-        async def catch_all(event, data):
-            """Log any unhandled commands from cloud for debugging."""
-            logger.debug(f"SocketClient: unhandled event '{event}': {data}")
+            
+            await sio.emit("response_camera_webrtc_url", {
+                "cameraId": camera_id,
+                "streamUrl": stream_url,
+                "requesterSocketId": requester_socket_id
+            })
+
 
 
 # Singleton — import this instance everywhere

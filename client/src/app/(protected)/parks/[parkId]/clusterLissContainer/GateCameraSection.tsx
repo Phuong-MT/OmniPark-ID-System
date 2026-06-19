@@ -1,8 +1,11 @@
-"use client";
-
 import { Camera, Clock, Link2, MonitorPlay, Plus, Video } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { AddCameraModal } from "./AddCameraModal";
+import { useSocketListenStreamCamera } from "./hook/useSocketListenStreamCamera";
+import { WebRTCPlayer } from "@/components/WebRTCPlayer";
+import { useSelector } from "react-redux";
+import { RootState } from "@/redux/store";
+
 
 interface DetectionData {
 	plate: string;
@@ -42,11 +45,40 @@ export function GateCameraSection({
 		vehicleType: "Car (Sedan)",
 		status: "Allowed",
 	});
+
+	// Lấy tenantCode của park hiện tại từ redux
+	const currentPark = useSelector((state: RootState) => state.adminParks.currentPark);
+	const tenantCode = currentPark?.tenantCode;
+
+	// State chứa streamUrl của từng camera slot
+	const [streamUrls, setStreamUrls] = useState<Record<string, string>>({});
+
+	// Hook lắng nghe và fetch WebRTC stream URL qua socket cho từng camera
+	const entryCam = getCameraForSlot("ENTRY");
+	const exitCam = getCameraForSlot("EXIT");
+
+	useSocketListenStreamCamera(
+		tenantCode,
+		entryCam?._id,
+		useCallback((url: string) => {
+			setStreamUrls(prev => ({ ...prev, [entryCam._id]: url }));
+		}, [entryCam?._id])
+	);
+
+	useSocketListenStreamCamera(
+		tenantCode,
+		exitCam?._id,
+		useCallback((url: string) => {
+			setStreamUrls(prev => ({ ...prev, [exitCam._id]: url }));
+		}, [exitCam?._id])
+	);
+
 	return (
 		<>
 			<div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 				{GATE_SLOTS.map((slot) => {
 					const cam = getCameraForSlot(slot.gateType);
+					const streamUrl = cam ? streamUrls[cam._id] : undefined;
 					return (
 						<div
 							key={slot.gateType}
@@ -74,22 +106,27 @@ export function GateCameraSection({
 							{cam ? (
 								/* Camera is linked — show info + URL */
 								<div className="flex flex-col gap-2">
-									{/* Camera view stub */}
-									<div className="relative aspect-video w-full rounded-lg bg-zinc-900 border border-zinc-800 overflow-hidden flex flex-col items-center justify-center shadow-inner">
-										<div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-transparent via-indigo-500/5 to-transparent h-1/2 w-full animate-[scan_3s_linear_infinite]" />
-										<div className="absolute inset-0 opacity-15 pointer-events-none bg-[linear-gradient(rgba(18,24,38,0)_95%,rgba(31,41,55,0.4)_95%),linear-gradient(90deg,rgba(18,24,38,0)_95%,rgba(31,41,55,0.4)_95%)] bg-[size:16px_16px]" />
-										<div className="absolute top-2 left-2 flex items-center gap-1.5 bg-black/60 backdrop-blur-sm px-2 py-0.5 rounded text-[10px] text-zinc-200 font-mono">
-											<span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-ping" />
-											<span>REC</span>
+									{/* Camera view stub or WebRTC Video Player */}
+									{streamUrl ? (
+										<WebRTCPlayer streamUrl={streamUrl} />
+									) : (
+										<div className="relative aspect-video w-full rounded-lg bg-zinc-900 border border-zinc-800 overflow-hidden flex flex-col items-center justify-center shadow-inner">
+											<div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-transparent via-indigo-500/5 to-transparent h-1/2 w-full animate-[scan_3s_linear_infinite]" />
+											<div className="absolute inset-0 opacity-15 pointer-events-none bg-[linear-gradient(rgba(18,24,38,0)_95%,rgba(31,41,55,0.4)_95%),linear-gradient(90deg,rgba(18,24,38,0)_95%,rgba(31,41,55,0.4)_95%)] bg-[size:16px_16px]" />
+											<div className="absolute top-2 left-2 flex items-center gap-1.5 bg-black/60 backdrop-blur-sm px-2 py-0.5 rounded text-[10px] text-zinc-200 font-mono">
+												<span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-ping" />
+												<span>REC</span>
+											</div>
+											<MonitorPlay className="h-8 w-8 text-indigo-500/40 animate-pulse" />
+											<span className="font-mono text-[10px] text-zinc-400 block mt-1">WAITING FOR STREAM URL...</span>
+											{/* Corner brackets */}
+											<div className="absolute top-1.5 left-1.5 w-3 h-3 border-t border-l border-zinc-500/60" />
+											<div className="absolute top-1.5 right-1.5 w-3 h-3 border-t border-r border-zinc-500/60" />
+											<div className="absolute bottom-1.5 left-1.5 w-3 h-3 border-b border-l border-zinc-500/60" />
+											<div className="absolute bottom-1.5 right-1.5 w-3 h-3 border-b border-r border-zinc-500/60" />
 										</div>
-										<MonitorPlay className="h-8 w-8 text-indigo-500/40" />
-										<span className="font-mono text-[10px] text-zinc-400 block mt-1">STREAMING ACTIVE</span>
-										{/* Corner brackets */}
-										<div className="absolute top-1.5 left-1.5 w-3 h-3 border-t border-l border-zinc-500/60" />
-										<div className="absolute top-1.5 right-1.5 w-3 h-3 border-t border-r border-zinc-500/60" />
-										<div className="absolute bottom-1.5 left-1.5 w-3 h-3 border-b border-l border-zinc-500/60" />
-										<div className="absolute bottom-1.5 right-1.5 w-3 h-3 border-b border-r border-zinc-500/60" />
-									</div>
+									)}
+
 
 									{/* Camera meta
 									<div className="flex flex-col gap-1 text-xs">

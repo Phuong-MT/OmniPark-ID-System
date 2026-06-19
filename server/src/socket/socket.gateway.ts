@@ -42,6 +42,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     handleDisconnect(client: Socket) {
         this.logger.log(`Client disconnected: ${client.id}`);
+        this.socketEdge.handleDisconnect(client);
     }
 
     @SubscribeMessage('edge_identify')
@@ -52,8 +53,25 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         return this.socketEdge.handleEdgeIdentify(client, data);
     }
 
+    @SubscribeMessage('request_camera_stream')
+    handleRequestCameraStream(
+        @ConnectedSocket() client: Socket,
+        @MessageBody() data: { tenantCode: string; cameraId: string },
+    ) {
+        return this.socketEdge.handleRequestCameraStream(client, data);
+    }
+
+    @SubscribeMessage('response_camera_webrtc_url')
+    handleResponseCameraWebRTCUrl(
+        @ConnectedSocket() client: Socket,
+        @MessageBody() data: { cameraId: string; streamUrl: string; requesterSocketId: string },
+    ) {
+        return this.socketEdge.handleResponseCameraWebRTCUrl(client, data);
+    }
+
     @SubscribeMessage('request_pairing_list')
     async handleRequestPairingList(@ConnectedSocket() client: Socket) {
+
         this.logger.log(`Client ${client.id} requested pairing list`);
         try {
             const devices = await this.devicesService.getPairingDevices();
