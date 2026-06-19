@@ -285,4 +285,19 @@ export class DevicesController {
             subnetMask: body.subnetMask,
         });
     }
+    // public api get cameraLRP
+    @Get('edge/cameras')
+    async getCameraLRPs(
+        @Query() query:{
+            tenantCode?: string;
+            parkId?: string;
+            clusterIds?: string[];
+        }
+    ) {
+        return this.devicesService.getCameraLRPs({
+            tenantCode: query.tenantCode,
+            parkId: query.parkId,
+            clusterIds: query.clusterIds,
+        });
+    }
 }

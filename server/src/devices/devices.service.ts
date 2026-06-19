@@ -565,4 +565,45 @@ export class DevicesService {
             camera,
         };
     }
+
+    // =========================
+    // GET CAMERA LPR FROM GATE
+    // =========================
+    async getCameraLRPs(query: {
+        tenantCode?: string;
+        parkId?: string;
+        clusterIds?: string[];
+    }): Promise<DeviceDocument[]> {
+        const filter: any = {};
+
+        let clusterIds = [];
+
+        if (query.tenantCode) {
+            filter.tenantCode = new Types.ObjectId(query.tenantCode);
+        }
+
+        if (query.parkId) {
+            clusterIds = await this.getClusterIdsFromParks([query.parkId]);
+        }
+
+        clusterIds = [
+            ...new Set([
+                ...clusterIds,
+                ...(query.clusterIds || []),
+            ]),
+        ];
+
+        if (clusterIds.length > 0) {
+            filter.clusterId = {
+                $in: clusterIds.map((id) => new Types.ObjectId(id)),
+            };
+        }
+
+        return this.deviceModel
+            .find({
+                type: DeviceType.CAMERA_LRP,
+                ...filter,
+            })
+            .lean();
+    }
 }

@@ -148,11 +148,7 @@ async def main():
                 logger.info(f"Fetching camera config from {edge_api_url}/cameras")
                 response = await client.get(f"{edge_api_url}/cameras", timeout=5.0)
                 if response.status_code == 200:
-                    # test ip webcam
-                    cameras = [{
-                        'id':"camera-Ip",
-                        'url': "rtsp://192.168.1.3:8080/h264.sdp"
-                    }]
+                    cameras = response.json()
                     if cameras:
                         logger.info(f"Received config for {len(cameras)} cameras: {[c.get('id') for c in cameras]}")
                         break

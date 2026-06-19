@@ -7,6 +7,7 @@ from models.event import EdgeEvent
 logger = logging.getLogger(__name__)
 
 BACKEND_URL = os.getenv("BACKEND_URL", "http://host.docker.internal:3000")
+TENANT_CODE = os.getenv("TENANT_CODE", "")
 
 async def forward_event_to_backend(event: EdgeEvent):
     """
@@ -36,13 +37,30 @@ async def fetch_cameras_config() -> list:
     """
     try:
         async with httpx.AsyncClient() as client:
-            url = f"{BACKEND_URL}/api/edge/config/cameras"
-            response = await client.get(url, timeout=10.0)
+            response = await client.get(
+                f"{BACKEND_URL}/devices/edge/cameras",
+                params={"tenantCode": TENANT_CODE},
+                timeout=10.0,
+            )
             response.raise_for_status()
-            config = response.json()
-            logger.info(f"Successfully fetched {len(config)} cameras configuration from backend.")
-            return config
+            cameras_config_list = response.json()
+            logger.info(
+                f"Successfully fetched {len(cameras_config_list)} cameras configuration from backend."
+            )
+            cameras = []
+            for item in cameras_config_list:
+                cameras.append(
+                    {
+                        "id": item["_id"],
+                        "camera_name": item["deviceName"],
+                        "url": item["cameraUrl"],
+                        "camera_type": item["type"],
+                    }
+                )
+            logger.info(
+                f"Successfully fetched {len(cameras)} cameras configuration from backend."
+            )
+            return cameras
     except Exception as e:
         logger.error(f"Failed to fetch cameras config from backend: {str(e)}")
-        # Fallback to empty list or default local config in production
         return []
