@@ -36,7 +36,9 @@ export class ParksController {
         private readonly assignmentsService: AssignmentsService,
         private readonly cloudinaryService: CloudinaryService,
     ) {}
-
+    /****************************************************************************************************/
+    //                                           Parks API                                               /
+    /****************************************************************************************************/
     @UseGuards(JwtAuthGuard, RolesGuard)
     @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.POC)
     @Get()
@@ -73,7 +75,7 @@ export class ParksController {
     @UseGuards(JwtAuthGuard, RolesGuard)
     @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.POC)
     @Get('count')
-    async count(@Req() req){
+    async count(@Req() req) {
         const user = req.user;
         const tenantCode =
             user.role === UserRole.SUPER_ADMIN ? undefined : user.tenantCode;
@@ -164,6 +166,10 @@ export class ParksController {
         });
     }
 
+    /****************************************************************************************************/
+    //                                    Cluster in Park API                                            /
+    /****************************************************************************************************/
+
     @UseGuards(JwtAuthGuard, RolesGuard)
     @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.POC)
     @Post(':parkId/clusters')
@@ -214,5 +220,18 @@ export class ParksController {
         const tenantCode =
             user.role === UserRole.SUPER_ADMIN ? undefined : user.tenantCode;
         return this.parksService.deleteCluster(parkId, clusterId, tenantCode);
+    }
+
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.POC)
+    @Get('cluster/:clusterId/devices')
+    async getDevicesInCluster(
+        @Req() req,
+        @Param('clusterId') clusterId: string,
+    ) {
+        const user = req.user;
+        const tenantCode =
+            user.role === UserRole.SUPER_ADMIN ? undefined : user.tenantCode;
+        return this.parksService.getDevicesInCluster(tenantCode, clusterId);
     }
 }

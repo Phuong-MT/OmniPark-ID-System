@@ -18,6 +18,7 @@ export interface ParkItem {
 
 interface AdminParksState {
 	parks: ParkItem[];
+	currentPark: ParkItem | null;
 	total: number;
 	page: number;
 	hasMore: boolean;
@@ -32,6 +33,7 @@ interface AdminParksState {
 
 const initialState: AdminParksState = {
 	parks: [],
+	currentPark: null,
 	total: 0,
 	page: 1,
 	hasMore: true,
@@ -65,6 +67,14 @@ const adminParksSlice = createSlice({
 		resetAdminParks(state) {
 			return initialState;
 		},
+		setCurrentPark(state, action: PayloadAction<ParkItem | null>) {
+            state.currentPark = action.payload;
+        },
+        updateCurrentParkClusters(state, action: PayloadAction<any[]>) {
+            if (state.currentPark) {
+                state.currentPark.clusters = action.payload;
+            }
+        }
 	},
 	extraReducers: (builder) => {
 		builder
@@ -107,6 +117,6 @@ const adminParksSlice = createSlice({
 	},
 });
 
-export const { setFilters, resetAdminParks } = adminParksSlice.actions;
+export const { setFilters, resetAdminParks, setCurrentPark, updateCurrentParkClusters } = adminParksSlice.actions;
 
 export default adminParksSlice.reducer;

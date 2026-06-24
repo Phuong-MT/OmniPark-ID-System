@@ -1,7 +1,7 @@
 import onnxruntime as ort
 import numpy as np
 import logging
-from src.engine.base import InferenceEngine
+from engine.base import InferenceEngine
 
 logger = logging.getLogger(__name__)
 

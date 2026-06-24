@@ -7,6 +7,7 @@ import {
     UseGuards,
     Post,
     Body,
+    Param,
 } from '@nestjs/common';
 import { DevicesService } from './devices.service';
 import { MqttSubscribe } from '../mqtt/ mqtt.decorator';
@@ -249,5 +250,54 @@ export class DevicesController {
     ) {
         const { mac } = context.params;
         this.devicesService.updateHeartbeat({ mac, ...payload });
+    }
+
+    /**
+     * POST /devices/:gateId/cameras
+     * Body: { gateType, cameraUrl, macAddress, deviceName? }
+     * Creates a CAMERA_LRP device and links it to the gate's cameraLprs.
+     */
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.POC)
+    @Post(':gateId/cameras')
+    async addCameraToGate(
+        @Param('gateId') gateId: string,
+        @Body()
+        body: {
+            gateType: 'ENTRY' | 'EXIT';
+            cameraUrl: string;
+            macAddress: string;
+            deviceName?: string;
+            localIp?: string;
+            hostname?: string;
+            subnetMask?: string;
+        },
+    ) {
+        this.logger.log(`Add camera to gate ${gateId}: ${JSON.stringify(body)}`);
+        return this.devicesService.addCameraToGate({
+            gateId,
+            gateType: body.gateType as any,
+            cameraUrl: body.cameraUrl,
+            macAddress: body.macAddress,
+            deviceName: body.deviceName,
+            localIp: body.localIp,
+            hostname: body.hostname,
+            subnetMask: body.subnetMask,
+        });
+    }
+    // public api get cameraLRP
+    @Get('edge/cameras')
+    async getCameraLRPs(
+        @Query() query:{
+            tenantCode?: string;
+            parkId?: string;
+            clusterIds?: string[];
+        }
+    ) {
+        return this.devicesService.getCameraLRPs({
+            tenantCode: query.tenantCode,
+            parkId: query.parkId,
+            clusterIds: query.clusterIds,
+        });
     }
 }

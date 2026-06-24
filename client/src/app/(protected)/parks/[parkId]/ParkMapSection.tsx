@@ -4,6 +4,8 @@ import React, { useRef, useState, useCallback } from "react";
 import { ImagePlus, UploadCloud, X, CheckCircle, AlertCircle } from "lucide-react";
 import apiClient from "@/utils/api/axios";
 import { AddClusterAction } from "./AddClusterAction";
+import { useSelector } from "react-redux";
+import { RootState } from "@/redux/store";
 
 interface ParkMapSectionProps {
 	parkId: string;
@@ -18,12 +20,14 @@ interface ParkMapSectionProps {
 			height: number;
 		};
 	};
-	initialClusters?: any[];
 }
 
 type UploadStatus = "idle" | "previewing" | "uploading" | "success" | "error";
 
-export function ParkMapSection({ parkId, map, initialClusters = [] }: ParkMapSectionProps) {
+const EMPTY_ARRAY: any[] = [];
+
+export function ParkMapSection({ parkId, map }: ParkMapSectionProps) {
+	const clusters = useSelector((state: RootState) => state.adminParks.currentPark?.clusters || EMPTY_ARRAY);
 	const fileInputRef = useRef<HTMLInputElement>(null);
 	const mapContainerRef = useRef<HTMLDivElement>(null);
 
@@ -173,7 +177,7 @@ export function ParkMapSection({ parkId, map, initialClusters = [] }: ParkMapSec
 						{status === "success" && (
 							<AddClusterAction
 								parkId={parkId}
-								initialClusters={initialClusters}
+								initialClusters={clusters}
 								mapContainerRef={mapContainerRef}
 								previewUrl={previewUrl}
 							/>
