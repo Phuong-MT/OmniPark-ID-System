@@ -40,14 +40,20 @@ async def process_camera_stream(camera, engine, dispatcher, frame_interval):
                 # Capture frame (blocking call, use to_thread)
                 frame = await asyncio.to_thread(stream.read_frame)
                 if frame is None:
-                    await asyncio.sleep(0.01)
+                    # Nếu mất kết nối với camera, đóng publisher hiện tại để chuẩn bị tạo lại khi kết nối lại
+                    if publisher is not None:
+                        logger.warning(f"[{camera_id}] Camera stream disconnected. Releasing publisher...")
+                        await asyncio.to_thread(publisher.close)
+                        publisher = None
+                    await asyncio.sleep(1.0) # Đợi lâu hơn một chút trước khi thử đọc lại
                     continue
                 
                 latest_frame = frame
                 new_frame_event.set()
                 
-                # Setup publisher on first frame
+                # Setup publisher on first frame or after reconnection
                 if publisher is None:
+                    logger.info(f"[{camera_id}] Initializing/re-initializing stream publisher...")
                     target_w = int(os.getenv("STREAM_WIDTH", "640"))
                     h, w = frame.shape[:2]
                     if w > target_w:
@@ -71,7 +77,12 @@ async def process_camera_stream(camera, engine, dispatcher, frame_interval):
                 
                 # Stream the annotated frame
                 if publisher:
-                    await asyncio.to_thread(publisher.write_frame, annotated_frame)
+                    try:
+                        await asyncio.to_thread(publisher.write_frame, annotated_frame)
+                    except Exception as pub_err:
+                        logger.error(f"[{camera_id}] Failed to write frame to publisher: {pub_err}")
+                        await asyncio.to_thread(publisher.close)
+                        publisher = None
                 
                 # Small sleep to yield control
                 await asyncio.sleep(0.001)

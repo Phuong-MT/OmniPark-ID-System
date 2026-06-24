@@ -40,8 +40,11 @@ export function WebRTCPlayer({ streamUrl }: WebRTCPlayerProps) {
                 const offer = await pc.createOffer();
                 await pc.setLocalDescription(offer);
 
+                // MediaMTX WHEP standard endpoint must be: http://<host>:<port>/<stream>/whep
+                const whepUrl = streamUrl.endsWith("/whep") ? streamUrl : `${streamUrl}/whep`;
+
                 // Gửi offer SDP tới MediaMTX WHEP endpoint
-                const response = await fetch(streamUrl, {
+                const response = await fetch(whepUrl, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/sdp",
