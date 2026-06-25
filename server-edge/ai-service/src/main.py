@@ -108,6 +108,40 @@ async def process_camera_stream(camera, engine, dispatcher, frame_interval):
                 vehicles = await asyncio.to_thread(engine.infer, frame_to_process)
                 predictions_state = vehicles
                 
+                # Lưu frame đã annotate và metadata biển số mới nhất vào shared_data
+                shared_dir = "/app/shared_data"
+                if os.path.exists(shared_dir):
+                    try:
+                        # Tìm kiếm xem có phát hiện xe/biển số nào không
+                        detected_plate = None
+                        detected_conf = 0.0
+                        for vehicle in vehicles:
+                            plate = vehicle.get("plate")
+                            if plate and plate.get("text"):
+                                detected_plate = plate["text"]
+                                detected_conf = plate["conf"]
+                                break
+
+                        # Vẽ annotation lên frame snapshot để lưu trữ
+                        annotated = engine.draw_annotations(frame_to_process, vehicles)
+                        snapshot_path = os.path.join(shared_dir, f"snapshot_{camera_id}.jpg")
+                        meta_path = os.path.join(shared_dir, f"snapshot_{camera_id}.json")
+                        
+                        # Lưu ảnh (sử dụng to_thread để tránh block event loop)
+                        await asyncio.to_thread(cv2.imwrite, snapshot_path, annotated)
+                        
+                        # Lưu metadata JSON
+                        import json
+                        meta_data = {
+                            "plate_number": detected_plate or "",
+                            "confidence": detected_conf,
+                            "timestamp": time.time()
+                        }
+                        with open(meta_path, "w") as f:
+                            json.dump(meta_data, f)
+                    except Exception as err:
+                        logger.error(f"[{camera_id}] Failed to save snapshot/meta to shared volume: {err}")
+
                 # Dispatch events
                 for vehicle in vehicles:
                     plate = vehicle.get("plate")
@@ -171,8 +205,8 @@ async def main():
             
     engine = YoloPipelineEngine()
     engine.load_models(
-        vehicle_model_path="yolov8n.pt",
-        plate_model_path="license-plate-finetune-v1n.pt"
+        vehicle_model_path="yolov8n.onnx",
+        plate_model_path="license-plate-finetune-v1n.onnx"
     )
     
     dispatcher = EventDispatcher()

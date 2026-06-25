@@ -108,6 +108,7 @@ export class MqttService implements OnModuleInit, OnModuleDestroy {
     }
 
     publish(topic: string, data: any, qos?: Qos) {
+        this.logger.log(`[MQTT] Publishing: ${topic}`);
         this.client.publish(topic, JSON.stringify(data), {
             qos: qos ?? Qos.AT_MOST_ONCE,
         });

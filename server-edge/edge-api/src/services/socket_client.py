@@ -1,5 +1,3 @@
-from PIL import AvifImagePlugin
-from networkx.generators import spectral_graph_forge
 import asyncio
 import logging
 import os
@@ -156,7 +154,52 @@ class SocketClient:
                 "requesterSocketId": requester_socket_id
             })
 
+        @sio.on("get_camera_snapshot")
+        async def on_get_camera_snapshot(data):
+            """
+            Cloud requests a snapshot + plate detection for a specific camera.
+            Returns data via Socket.IO ack callback (no HTTP round-trip needed).
+            """
+            import json
+            import base64
+            import time as _time
+
+            camera_id = data.get("cameraId", "")
+            logger.info(f"SocketClient: received 'get_camera_snapshot' for camera {camera_id}")
+
+            shared_dir = os.getenv("SHARED_DATA_DIR", "/app/shared_data")
+            snapshot_path = os.path.join(shared_dir, f"snapshot_{camera_id}.jpg")
+            meta_path = os.path.join(shared_dir, f"snapshot_{camera_id}.json")
+
+            result = {
+                "plate_number": "",
+                "confidence": 0.0,
+                "image_base64": ""
+            }
+
+            if not os.path.exists(snapshot_path):
+                logger.warning(f"SocketClient: snapshot not found at {snapshot_path}")
+                return result
+
+            try:
+                with open(snapshot_path, "rb") as image_file:
+                    encoded_string = base64.b64encode(image_file.read()).decode("utf-8")
+
+                if os.path.exists(meta_path):
+                    with open(meta_path, "r") as f:
+                        meta = json.load(f)
+                        if _time.time() - meta.get("timestamp", 0) < 5.0:
+                            result["plate_number"] = meta.get("plate_number", "")
+                            result["confidence"] = meta.get("confidence", 0.0)
+
+                result["image_base64"] = f"data:image/jpeg;base64,{encoded_string}"
+            except Exception as e:
+                logger.error(f"SocketClient: failed to read snapshot: {e}")
+
+            return result
+
 
 
 # Singleton — import this instance everywhere
 socket_client = SocketClient()
+

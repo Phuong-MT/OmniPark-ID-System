@@ -13,12 +13,15 @@ import {
     DeviceStatus,
     DevicePairState,
     DeviceType,
-    GATE_TYPE
+    GATE_TYPE,
 } from './schema/devices.schema';
+import { CheckInOut, CheckInOutDocument } from './schema/check-in-out.schema';
 import { DBName } from 'src/utils/connectDB';
 import { Park, ParkDocument } from 'src/parks/schema/park.schema';
 import { MqttService } from 'src/mqtt/mqtt.service';
 import { SocketGateway } from '../socket/socket.gateway';
+import { SocketEdge } from '../socket/socket.edge';
+import { CloudinaryService } from '../cloudinary/cloudinary.service';
 
 @Injectable()
 export class DevicesService {
@@ -27,8 +30,13 @@ export class DevicesService {
         private readonly deviceModel: Model<DeviceDocument>,
         @InjectModel(Park.name, DBName.omniparkIDSystem)
         private readonly parkModel: Model<ParkDocument>,
+        @InjectModel(CheckInOut.name, DBName.omniparkIDSystem)
+        private readonly checkInOutModel: Model<CheckInOutDocument>,
         @Inject(forwardRef(() => MqttService))
         private readonly mqttService: MqttService,
+        @Inject(forwardRef(() => SocketEdge))
+        private readonly socketEdge: SocketEdge,
+        private readonly cloudinaryService: CloudinaryService,
     ) {}
 
     private gateway: SocketGateway;
@@ -405,25 +413,31 @@ export class DevicesService {
         // Update stats for cluster and park
         if (Types.ObjectId.isValid(objectId)) {
             const clusterIdObj = new Types.ObjectId(objectId);
-            const totalDevicesInCluster = await this.deviceModel.countDocuments({ clusterId: clusterIdObj });
-            
+            const totalDevicesInCluster = await this.deviceModel.countDocuments(
+                { clusterId: clusterIdObj },
+            );
+
             // Update cluster stats in the park
             const updatedPark = await this.parkModel.findOneAndUpdate(
                 { 'clusters._id': clusterIdObj },
-                { $set: { 'clusters.$.stats.totalDevices': totalDevicesInCluster } },
-                { new: true }
+                {
+                    $set: {
+                        'clusters.$.stats.totalDevices': totalDevicesInCluster,
+                    },
+                },
+                { new: true },
             );
 
             if (updatedPark) {
                 // Calculate total devices for the park (sum of totalDevices across all clusters)
                 const parkTotalDevices = updatedPark.clusters.reduce(
                     (sum, cluster) => sum + (cluster.stats?.totalDevices || 0),
-                    0
+                    0,
                 );
-                
+
                 await this.parkModel.updateOne(
                     { _id: updatedPark._id },
-                    { $set: { 'stats.totalDevices': parkTotalDevices } }
+                    { $set: { 'stats.totalDevices': parkTotalDevices } },
                 );
             }
         }
@@ -513,19 +527,26 @@ export class DevicesService {
         }
 
         // Check duplicate gateType slot
-        const alreadyHasType = cameraLprs.some((c) => c.gateType === payload.gateType);
+        const alreadyHasType = cameraLprs.some(
+            (c) => c.gateType === payload.gateType,
+        );
         if (alreadyHasType) {
-            throw new Error(`Gate already has a ${payload.gateType} camera assigned`);
+            throw new Error(
+                `Gate already has a ${payload.gateType} camera assigned`,
+            );
         }
 
         // Create the camera device inheriting gate's tenant + cluster
         const macUpper = payload.macAddress.toUpperCase();
-        const existingCamera = await this.deviceModel.findOne({ macAddress: macUpper });
+        const existingCamera = await this.deviceModel.findOne({
+            macAddress: macUpper,
+        });
         let camera: DeviceDocument;
 
         if (existingCamera) {
             existingCamera.cameraUrl = payload.cameraUrl;
-            if (payload.deviceName) existingCamera.deviceName = payload.deviceName;
+            if (payload.deviceName)
+                existingCamera.deviceName = payload.deviceName;
             existingCamera.clusterId = gate.clusterId;
             existingCamera.tenantCode = gate.tenantCode;
             await existingCamera.save();
@@ -534,9 +555,12 @@ export class DevicesService {
             camera = await this.deviceModel.create({
                 macAddress: macUpper,
                 type: DeviceType.CAMERA_LRP,
-                deviceName: payload.deviceName || `CAM_LPR_${macUpper.slice(-5)}`,
+                deviceName:
+                    payload.deviceName || `CAM_LPR_${macUpper.slice(-5)}`,
                 cameraUrl: payload.cameraUrl,
-                hostname: payload.hostname || `cam-${macUpper.replace(/:/g, '').toLowerCase()}`,
+                hostname:
+                    payload.hostname ||
+                    `cam-${macUpper.replace(/:/g, '').toLowerCase()}`,
                 localIp: payload.localIp || '0.0.0.0',
                 subnetMask: payload.subnetMask || '255.255.255.0',
                 status: DeviceStatus.ACTIVE,
@@ -549,7 +573,10 @@ export class DevicesService {
         // Link camera to gate
         gate.cameraLprs = [
             ...cameraLprs,
-            { cameraId: camera._id as Types.ObjectId, gateType: payload.gateType },
+            {
+                cameraId: camera._id as Types.ObjectId,
+                gateType: payload.gateType,
+            },
         ];
         await gate.save();
 
@@ -586,12 +613,7 @@ export class DevicesService {
             clusterIds = await this.getClusterIdsFromParks([query.parkId]);
         }
 
-        clusterIds = [
-            ...new Set([
-                ...clusterIds,
-                ...(query.clusterIds || []),
-            ]),
-        ];
+        clusterIds = [...new Set([...clusterIds, ...(query.clusterIds || [])])];
 
         if (clusterIds.length > 0) {
             filter.clusterId = {
@@ -605,5 +627,118 @@ export class DevicesService {
                 ...filter,
             })
             .lean();
+    }
+
+    // ==========================================
+    // HANDLE RFID CARD SWIPE (Entry / Exit Lane)
+    // ==========================================
+    async handleRfidCardScan(payload: {
+        mac: string;
+        card_id: string;
+        gate: 'ENTRY' | 'EXIT';
+        timestamp: number;
+    }) {
+        const macUpper = payload.mac.toUpperCase();
+        const gateDevice = await this.deviceModel.findOne({
+            macAddress: macUpper,
+        });
+
+        if (!gateDevice) {
+            throw new NotFoundException(
+                `Gate device with MAC ${payload.mac} not found`,
+            );
+        }
+
+        // Tìm camera liên kết của Lane này
+        const cameraLpr = (gateDevice.cameraLprs || []).find(
+            (c) => c.gateType === payload.gate,
+        );
+
+        if (!cameraLpr) {
+            throw new Error(`Camera LPR not found for gate ${payload.gate}`);
+        }
+
+        let cameraId: Types.ObjectId | undefined = undefined;
+        let plateNumber = '';
+        let confidence = 0.0;
+        let snapshotUrl = '';
+        cameraId = cameraLpr.cameraId;
+
+        // Lấy snapshot từ Edge qua Socket.IO (thay vì HTTP)
+        const tenantCode = gateDevice.tenantCode?.toString() || '';
+        if (!tenantCode) {
+            throw new Error('Tenant code not found');
+        }
+
+        try {
+            const snapshotData = await this.socketEdge.requestSnapshot(
+                tenantCode,
+                cameraId.toString(),
+            );
+
+            if (
+                !snapshotData ||
+                !snapshotData.plate_number ||
+                !snapshotData.image_base64 ||
+                !snapshotData.confidence
+            ) {
+                throw new Error(
+                    `Failed to fetch snapshot for camera ${cameraId}`,
+                );
+            }
+
+            plateNumber = snapshotData.plate_number;
+            confidence = snapshotData.confidence;
+
+            // Upload ảnh lên Cloudinary
+            const base64Data = snapshotData.image_base64;
+            const matches = base64Data.match(
+                /^data:([A-Za-z-+\/]+);base64,(.+)$/,
+            );
+            if (matches && matches.length === 3) {
+                const buffer = Buffer.from(matches[2], 'base64');
+                const uploadResult =
+                    await this.cloudinaryService.uploadParkMapBuffer(
+                        buffer,
+                        `omnipark/snapshots/${tenantCode}`,
+                    );
+                snapshotUrl = uploadResult.original;
+            }
+        } catch (err: any) {
+            throw new Error(
+                `Failed to fetch snapshot via socket for camera ${cameraId}: ${err.message}`,
+            );
+        }
+
+        // Lưu thông tin vào database
+        const checkRecord = await this.checkInOutModel.create({
+            tenantCode: gateDevice.tenantCode,
+            deviceId: gateDevice._id,
+            cameraId,
+            cardId: payload.card_id,
+            plateNumber: plateNumber,
+            confidence: confidence,
+            snapshotUrl: snapshotUrl,
+            type: payload.gate,
+        });
+
+        // Broadcast sự kiện Web Client qua Socket.IO để hiển thị realtime lịch sử quẹt thẻ
+        if (this.gateway && this.gateway.server) {
+            this.gateway.server.emit('new_check_in_out', {
+                ...checkRecord.toJSON(),
+                gateDeviceName: gateDevice.deviceName,
+            });
+        }
+
+        // Gửi lệnh MQTT mở cổng ngược lại cho thiết bị
+        // ESP32 Gate lắng nghe topic: omnipark-id-system/device/gate-control/<mac> để điều khiển servo
+        const controlTopic = `omnipark-id-system/device/gate-control/${macUpper.toLowerCase()}`;
+        this.mqttService.publish(controlTopic, {
+            action: 'OPEN_GATE',
+            gate: payload.gate,
+            status: 'SUCCESS',
+            message: 'RFID Validated',
+            cardId: payload.card_id,
+        });
     }
 }

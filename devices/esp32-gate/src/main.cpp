@@ -57,18 +57,6 @@ PairingHandler pairing(mqtt, deviceInfo, "GATE", entryOled, exitOled);
 void onCardScanned(GateType type, const String &cardId, bool isError)
 {
     String gateName = (type == GateType::ENTRY) ? "ENTRY" : "EXIT";
-    OledDisplay &targetOled = (type == GateType::ENTRY) ? entryOled : exitOled;
-    GateServo &targetServo = (type == GateType::ENTRY) ? entryServo : exitServo;
-
-    if (isError)
-    {
-        targetOled.showError();
-        return;
-    }
-
-    targetOled.showGreeting(cardId);
-    targetServo.open();
-
     Serial.println("[" + gateName + "] Card scanned: " + cardId);
 
     StaticJsonDocument<128> doc;
@@ -103,27 +91,33 @@ void handshakeHeartbeatTask(void *pvParameters)
         {
             unsigned long now = millis();
 
-            if (deviceStateMutex != NULL && xSemaphoreTake(deviceStateMutex, portMAX_DELAY) == pdTRUE)
+            if (deviceStateMutex != NULL &&
+                xSemaphoreTake(deviceStateMutex, portMAX_DELAY) == pdTRUE)
             {
                 // Handshake sending
-                if (!lastHandshakeMs || (now - lastHandshakeMs > HANDSHAKE_INTERVAL &&
-                                         !(deviceInfo.getSessionToken().length() > 0 && deviceInfo.getSessionTokenExpiresAt() > std::time(nullptr))))
+                if (!lastHandshakeMs ||
+                    (now - lastHandshakeMs > HANDSHAKE_INTERVAL &&
+                     !(deviceInfo.getSessionToken().length() > 0 &&
+                       deviceInfo.getSessionTokenExpiresAt() > std::time(nullptr))))
                 {
                     Serial.println("[HS] Sending handshake...");
 
                     NetworkInfo netInfo = wifi.get();
                     std::string payload = hs.buildRequestPayload(
-                        netInfo.ssid.c_str(), netInfo.subnetMask.c_str(), netInfo.ip.toString().c_str());
+                        netInfo.ssid.c_str(), netInfo.subnetMask.c_str(),
+                        netInfo.ip.toString().c_str());
 
                     mqtt.publish(HANDSHAKE_TOPIC_REQUEST, payload.c_str());
 
                     lastHandshakeMs = now;
                 }
                 // Heartbeat after handshake
-                else if (deviceInfo.getDeviceId().length() > 0 && deviceInfo.getPairing() == DevicePairState::PAIRED)
+                else if (deviceInfo.getDeviceId().length() > 0 &&
+                         deviceInfo.getPairing() == DevicePairState::PAIRED)
                 {
                     if (hs.hasValidSession(std::time(nullptr)) &&
-                        now - lastHeartbeatMs > HEARTBEAT_INTERVALS[currentHeartbeatIndex])
+                        now - lastHeartbeatMs >
+                            HEARTBEAT_INTERVALS[currentHeartbeatIndex])
                     {
                         Serial.println("[Heartbeat] Sending...");
 
@@ -200,6 +194,76 @@ void setup()
             }
         });
 
+    // Đăng ký handler nhận lệnh điều khiển mở cổng từ Cloud Server
+    String controlTopic = "omnipark-id-system/device/gate-control/" + macStr;
+    mqtt.registerHandler(
+        controlTopic.c_str(),
+        [&](const char *topic, const uint8_t *payload, unsigned int length)
+        {
+            Serial.println("[Control] Received gate control command");
+            StaticJsonDocument<256> doc;
+            DeserializationError error = deserializeJson(doc, payload, length);
+            if (error)
+            {
+                Serial.print(F("deserializeJson() failed: "));
+                Serial.println(error.f_str());
+                return;
+            }
+
+            const char *action = doc["action"]; // "OPEN_GATE"
+            const char *gateSide = doc["gate"]; // "ENTRY" or "EXIT"
+            const char *cardId = doc["cardId"];
+
+            if (action && strcmp(action, "OPEN_GATE") == 0 && gateSide)
+            {
+                if (strcmp(gateSide, "ENTRY") == 0)
+                {
+                    entryOled.showGreeting(cardId);
+                    Serial.println("[Control] Opening ENTRY Gate Servo...");
+                    entryServo.open();
+                }
+                else if (strcmp(gateSide, "EXIT") == 0)
+                {
+                    exitOled.showGreeting(cardId);
+                    Serial.println("[Control] Opening EXIT Gate Servo...");
+                    exitServo.open();
+                }
+            }
+        });
+
+    String rfidErrorTopic = "iot/gate/" + macStr + "/rfid-error";
+    mqtt.registerHandler(
+        rfidErrorTopic.c_str(),
+        [&](const char *topic, const uint8_t *payload, unsigned int length)
+        {
+            Serial.println("[RFID Error] Received RFID error command");
+            StaticJsonDocument<256> doc;
+            DeserializationError error = deserializeJson(doc, payload, length);
+            if (error)
+            {
+                Serial.print(F("deserializeJson() failed: "));
+                Serial.println(error.f_str());
+                return;
+            }
+
+            const char *status = doc["status"];   // "ERROR"
+            const char *message = doc["message"]; // "Unexpected error"
+            const char *gateSide = doc["gate"];
+
+            if (status && strcmp(status, "ERROR") == 0 && message)
+            {
+                Serial.println("[RFID Error] Error: " + String(message));
+                if (strcmp(gateSide, "ENTRY") == 0)
+                {
+                    entryOled.showError(message);
+                }
+                else if (strcmp(gateSide, "EXIT") == 0)
+                {
+                    exitOled.showError(message);
+                }
+            }
+        });
+
     randomSeed(ESP.getCycleCount());
     pairing.begin();
     mqtt.begin();
@@ -231,19 +295,15 @@ void setup()
 
     // Create FreeRTOS task for background Handshake and Heartbeat operations
     xTaskCreatePinnedToCore(
-        handshakeHeartbeatTask,
-        "HS_HB_Task",
-        4096,
-        NULL,
-        1,
-        &hsHbTaskHandle,
+        handshakeHeartbeatTask, "HS_HB_Task", 4096, NULL, 1, &hsHbTaskHandle,
         0 // Pinned to core 0 (main Arduino task runs on core 1)
     );
 }
 
 void loop()
 {
-    if (deviceStateMutex != NULL && xSemaphoreTake(deviceStateMutex, portMAX_DELAY) == pdTRUE)
+    if (deviceStateMutex != NULL &&
+        xSemaphoreTake(deviceStateMutex, portMAX_DELAY) == pdTRUE)
     {
         mqtt.loop();
 

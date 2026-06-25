@@ -6,12 +6,12 @@ services:
         container_name: mediamtx
         restart: unless-stopped
         ports:
-            - "8554:8554"    # RTSP
-            - "1935:1935"    # RTMP
-            - "8888:8888"    # HLS
-            - "8889:8889"    # WebRTC (signaling)
+            - "8554:8554" # RTSP
+            - "1935:1935" # RTMP
+            - "8888:8888" # HLS
+            - "8889:8889" # WebRTC (signaling)
             - "8189:8189/udp" # WebRTC (media UDP)
-            - "9997:9997"    # API
+            - "9997:9997" # API
         volumes:
             - ./mediamtx.yml:/mediamtx.yml
 
@@ -22,19 +22,41 @@ services:
         restart: unless-stopped
         ports:
             - "8000:8000"
+        env_file:
+            - ./edge-api/.env
         environment:
+            # Overrides localhost from .env to hit the Mac host instead
             - BACKEND_URL=http://host.docker.internal:3000
+            - CLOUD_WS_URL=http://host.docker.internal:3000
+        volumes:
+            - shared-data:/app/shared_data
         depends_on:
             - mediamtx
 
     ai-service:
+        platform: linux/arm64
         build:
             context: ./ai-service
         container_name: ai-service
+        #  Expose GPU
+        # deploy:
+        #     resources:
+        #         reservations:
+        #             devices:
+        #                 - driver: nvidia
+        #                   count: 1 # hoặc "all"
+        #                   capabilities: [gpu]
         restart: unless-stopped
         environment:
             - MEDIAMTX_RTSP_URL=rtsp://mediamtx:8554
             - EDGE_API_URL=http://edge-api:8000
+            - TORCH_CPP_MIN_LOG_LEVEL=3
+            - NNPACK_DISABLE=1
+        volumes:
+            - shared-data:/app/shared_data
         depends_on:
             - mediamtx
             - edge-api
+
+volumes:
+    shared-data:

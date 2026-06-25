@@ -77,3 +77,55 @@ def get_cameras():
     Endpoint for ai-service to retrieve the dynamic list of cameras to process.
     """
     return app_state["cameras"]
+
+@app.get("/cameras/{camera_id}/snapshot")
+def get_camera_snapshot(camera_id: str):
+    """
+    Get the latest snapshot and detected plate number for a specific camera.
+    Returns Base64 image and metadata.
+    """
+    import json
+    import base64
+    
+    shared_dir = "/app/shared_data"
+    snapshot_path = os.path.join(shared_dir, f"snapshot_{camera_id}.jpg")
+    meta_path = os.path.join(shared_dir, f"snapshot_{camera_id}.json")
+    
+    if not os.path.exists(snapshot_path):
+        # Fallback if no frame has been captured yet
+        return {
+            "plate_number": "",
+            "confidence": 0.0,
+            "image_base64": ""
+        }
+        
+    try:
+        # Đọc ảnh và chuyển sang Base64
+        with open(snapshot_path, "rb") as image_file:
+            encoded_string = base64.b64encode(image_file.read()).decode("utf-8")
+            
+        # Đọc metadata
+        plate_number = ""
+        confidence = 0.0
+        if os.path.exists(meta_path):
+            with open(meta_path, "r") as f:
+                meta = json.load(f)
+                # Chỉ lấy biển số nếu nó được ghi nhận gần đây (ví dụ trong vòng 5 giây)
+                # Để tránh lấy biển số cũ của xe trước đã rời đi
+                if time.time() - meta.get("timestamp", 0) < 5.0:
+                    plate_number = meta.get("plate_number", "")
+                    confidence = meta.get("confidence", 0.0)
+                    
+        return {
+            "plate_number": plate_number,
+            "confidence": confidence,
+            "image_base64": f"data:image/jpeg;base64,{encoded_string}"
+        }
+    except Exception as e:
+        return {
+            "error": f"Failed to retrieve snapshot: {str(e)}",
+            "plate_number": "",
+            "confidence": 0.0,
+            "image_base64": ""
+        }
+

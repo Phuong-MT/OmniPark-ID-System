@@ -1,10 +1,10 @@
-opencv-python==4.9.0.80
+opencv-python-headless==4.9.0.80
 onnxruntime==1.17.0
 numpy==1.26.4
 httpx==0.26.0
 python-dotenv==1.0.1
 pydantic==2.6.1
 ultralytics>=8.0.0
-paddlepaddle>=3.3.1
+paddlepaddle==3.2.2
 paddleocr>=3.7.0
 paddlex>=3.7.1

@@ -6,6 +6,6 @@ import { SocketEdge } from './socket.edge';
 @Module({
     imports: [forwardRef(() => DevicesModule)],
     providers: [SocketGateway, SocketEdge],
-    exports: [SocketGateway],
+    exports: [SocketGateway, SocketEdge],
 })
 export class SocketModule {}

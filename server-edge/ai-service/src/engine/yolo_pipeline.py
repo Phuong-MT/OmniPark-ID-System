@@ -1,8 +1,13 @@
+import os
+import warnings
+# Suppress NNPACK warning on unsupported hardware (ARM / certain VMs)
+os.environ["NNPACK_DISABLE"] = "1"
+warnings.filterwarnings("ignore", category=UserWarning)
+
 import logging
 import re
 import cv2
 import numpy as np
-import os
 
 try:
     from ultralytics import YOLO

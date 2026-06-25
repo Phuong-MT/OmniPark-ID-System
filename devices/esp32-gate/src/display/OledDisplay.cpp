@@ -89,6 +89,46 @@ void OledDisplay::showError()
     _displayClearMs = millis() + 3000;
 }
 
+void OledDisplay::showError(const String &message)
+{
+    _display.clearDisplay();
+    drawHeader("SCAN ERROR");
+
+    String line1;
+    String line2;
+    String line3;
+
+    if (message.length() <= 15)
+    {
+        line1 = message;
+    }
+    else if (message.length() <= 30)
+    {
+        line1 = message.substring(0, 15);
+        line2 = message.substring(15);
+    }
+    else
+    {
+        line1 = message.substring(0, 15);
+        line2 = message.substring(15, 30);
+        line3 = message.substring(30, 42) + "...";
+    }
+
+    centerText(line1, 22, 1);
+
+    if (line2.length() > 0)
+    {
+        centerText(line2, 36, 1);
+    }
+    if (line3.length() > 0)
+    {
+        centerText(line3, 50, 1);
+    }
+
+    _display.display();
+    _displayClearMs = millis() + 3000;
+}
+
 void OledDisplay::showGreeting(const String &cardId)
 {
     String gateName = (_gateType == GateType::ENTRY) ? "ENTRY GATE" : "EXIT GATE";

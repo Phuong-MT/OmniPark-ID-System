@@ -39,12 +39,37 @@ export function GateCameraSection({
 
 	const isOnline = device.status === "ACTIVE";
 	const [data, setLane1] = useState<DetectionData>({
-		plate: "29A-123.45",
-		confidence: 98.7,
-		timestamp: new Date().toLocaleTimeString(),
-		vehicleType: "Car (Sedan)",
-		status: "Allowed",
+		plate: "NO PLATE",
+		confidence: 0,
+		timestamp: "--:--:--",
+		vehicleType: "Unknown",
+		status: "Pending",
 	});
+
+	// Socket.IO hook listening for RFID transaction Check-in events
+	const { useSocket } = require("@/socket/useSocket");
+	useSocket({
+		namespace: "",
+		listen: useCallback((socket: any) => {
+			socket.on("new_check_in_out", (payload: any) => {
+				// Nếu event thuộc Gate hiện tại
+				if (payload.deviceId === device._id) {
+					setLane1({
+						plate: payload.plateNumber || "NO PLATE",
+						confidence: payload.confidence ? payload.confidence * 100 : 0,
+						timestamp: new Date(payload.createdAt).toLocaleTimeString(),
+						vehicleType: payload.plateNumber ? "Car/Motorbike" : "Unknown",
+						status: payload.plateNumber ? "Allowed" : "Visitor",
+						imageUrl: payload.snapshotUrl,
+					});
+				}
+			});
+			return () => {
+				socket.off("new_check_in_out");
+			};
+		}, [device._id]),
+	});
+
 
 	// Lấy tenantCode của park hiện tại từ redux
 	const currentPark = useSelector((state: RootState) => state.adminParks.currentPark);
@@ -126,22 +151,6 @@ export function GateCameraSection({
 											<div className="absolute bottom-1.5 right-1.5 w-3 h-3 border-b border-r border-zinc-500/60" />
 										</div>
 									)}
-
-
-									{/* Camera meta
-									<div className="flex flex-col gap-1 text-xs">
-										<div className="flex items-center gap-1.5 text-zinc-600 dark:text-zinc-400">
-											<Camera className="h-3.5 w-3.5 shrink-0" />
-											<span className="font-semibold truncate">{cam.deviceName || cam.macAddress}</span>
-										</div>
-										{cam.cameraUrl && (
-											<div className="flex items-start gap-1.5 text-indigo-500 dark:text-indigo-400">
-												<Link2 className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-												<span className="font-mono text-[10px] break-all leading-tight">{cam.cameraUrl}</span>
-											</div>
-										)}
-									</div> */}
-                                    {/* Plate Detection Result Box */}
                                     <div
                                         className={`relative flex flex-col gap-3 rounded-lg border p-3.5 justify-between transition-all duration-300 ${
                                             !isOnline
@@ -173,17 +182,29 @@ export function GateCameraSection({
                                                 </span>
                                             )}
                                         </div>
-
                                         {/* License Plate Display Graphic */}
                                         {isOnline ? (
                                             <div className="flex flex-col gap-2 my-1">
-                                                {/* The Vietnam-style plate container */}
-                                                <div className="border-2 border-zinc-700 dark:border-zinc-300 rounded-md bg-white p-1.5 shadow-sm text-center font-bold tracking-wide relative max-w-[170px] mx-auto w-full group/plate overflow-hidden">
-                                                    <div className="absolute inset-0 bg-indigo-500/10 pointer-events-none opacity-0 group-hover/plate:opacity-100 transition-opacity" />
-                                                    <div className="h-0.5 w-full bg-zinc-300 mb-1" />
-                                                    <span className="text-zinc-900 text-lg md:text-xl font-mono leading-none tracking-wider font-extrabold drop-shadow-[0.5px_0.5px_0_rgba(0,0,0,0.1)] block py-0.5">
-                                                        {data.plate}
-                                                    </span>
+                                                <div className="flex items-center gap-3">
+                                                    {/* Vietnam-style plate container */}
+                                                    <div className="border-2 border-zinc-700 dark:border-zinc-300 rounded-md bg-white p-1.5 shadow-sm text-center font-bold tracking-wide relative max-w-[150px] w-full group/plate overflow-hidden">
+                                                        <div className="absolute inset-0 bg-indigo-500/10 pointer-events-none opacity-0 group-hover/plate:opacity-100 transition-opacity" />
+                                                        <div className="h-0.5 w-full bg-zinc-300 mb-1" />
+                                                        <span className="text-zinc-900 text-base md:text-lg font-mono leading-none tracking-wider font-extrabold drop-shadow-[0.5px_0.5px_0_rgba(0,0,0,0.1)] block py-0.5">
+                                                            {data.plate}
+                                                        </span>
+                                                    </div>
+
+                                                    {/* Snapshot preview image from Cloudinary */}
+                                                    {data.imageUrl && (
+                                                        <div className="relative h-14 w-24 rounded border border-zinc-200 dark:border-zinc-800 overflow-hidden bg-zinc-100 flex-shrink-0">
+                                                            <img 
+                                                                src={data.imageUrl} 
+                                                                alt="Plate Snapshot" 
+                                                                className="h-full w-full object-cover"
+                                                            />
+                                                        </div>
+                                                    )}
                                                 </div>
 
                                                 <div className="grid grid-cols-2 gap-2 text-[10px] text-zinc-500 mt-1">
@@ -204,7 +225,7 @@ export function GateCameraSection({
                                                         </span>
                                                     </div>
                                                 </div>
-                                            </div>
+                                            </div>                       
                                         ) : (
                                             <div className="text-center py-4 text-zinc-400 text-xs">
                                                 <Clock className="h-4 w-4 mx-auto mb-1 opacity-50" />

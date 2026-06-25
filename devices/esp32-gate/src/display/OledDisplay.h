@@ -18,6 +18,7 @@ public:
     // Commands to show on the screen
     void showIdle();
     void showError();
+    void showError(const String &message);
     void showGreeting(const String &cardId);
     void showMessage(const String &msg, uint8_t textSize = 1, bool clearScreen = true);
     void showPairing(const String &macAddress, const String &sectionId, int countdownSeconds);

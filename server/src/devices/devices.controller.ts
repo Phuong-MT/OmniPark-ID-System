@@ -53,7 +53,8 @@ export class DevicesController {
             const pocAssignments =
                 await this.assignmentsService.getPocAssignments(user.userId);
             const parkIds = pocAssignments.map((a) => a.parkId.toString());
-            const clusterIds = await this.devicesService.getClusterIdsFromParks(parkIds);
+            const clusterIds =
+                await this.devicesService.getClusterIdsFromParks(parkIds);
             return this.devicesService.findDevices(
                 { clusterIds, type, search },
                 pageNum,
@@ -79,7 +80,8 @@ export class DevicesController {
             const pocAssignments =
                 await this.assignmentsService.getPocAssignments(user.userId);
             const parkIds = pocAssignments.map((a) => a.parkId.toString());
-            const clusterIds = await this.devicesService.getClusterIdsFromParks(parkIds);
+            const clusterIds =
+                await this.devicesService.getClusterIdsFromParks(parkIds);
             return this.devicesService.countDevices({
                 clusterIds: clusterIds,
             });
@@ -240,6 +242,37 @@ export class DevicesController {
         }
     }
 
+    @MqttSubscribe('iot/gate/:mac/rfid')
+    async handleGateRfidScan(
+        data: { card_id: string; gate: 'ENTRY' | 'EXIT'; timestamp: number },
+        context: { params: Record<string, string> },
+    ) {
+        const { mac } = context.params;
+        this.logger.log(
+            `RFID card scanned at gate ${mac}: Card ID ${data.card_id}, Gate ${data.gate}`,
+        );
+        try {
+            await this.devicesService.handleRfidCardScan({
+                mac,
+                card_id: data.card_id,
+                gate: data.gate,
+                timestamp: data.timestamp,
+            });
+        } catch (error: any) {
+            this.mqttService.publish(
+                `iot/gate/${mac.toLowerCase()}/rfid-error`,
+                {
+                    status: 'ERROR',
+                    message: error?.message || 'Unexpected error',
+                    gate: data.gate,
+                },
+            );
+            this.logger.error(
+                `Failed to handle RFID card scan event: ${error?.message}`,
+            );
+        }
+    }
+
     /*
   
   */
@@ -273,7 +306,9 @@ export class DevicesController {
             subnetMask?: string;
         },
     ) {
-        this.logger.log(`Add camera to gate ${gateId}: ${JSON.stringify(body)}`);
+        this.logger.log(
+            `Add camera to gate ${gateId}: ${JSON.stringify(body)}`,
+        );
         return this.devicesService.addCameraToGate({
             gateId,
             gateType: body.gateType as any,
@@ -288,11 +323,12 @@ export class DevicesController {
     // public api get cameraLRP
     @Get('edge/cameras')
     async getCameraLRPs(
-        @Query() query:{
+        @Query()
+        query: {
             tenantCode?: string;
             parkId?: string;
             clusterIds?: string[];
-        }
+        },
     ) {
         return this.devicesService.getCameraLRPs({
             tenantCode: query.tenantCode,
